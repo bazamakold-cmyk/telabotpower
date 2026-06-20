@@ -191,7 +191,7 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
       />
 
       <Dialog open={draft !== null} onOpenChange={(o) => !o && setDraft(null)}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[820px]">
           {draft && (
             <form
               className="space-y-4"
