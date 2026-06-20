@@ -11,11 +11,11 @@ import {
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
 export const primaryNav: NavItem[] = [
-  { href: "/", label: "แดชบอร์ด", icon: LayoutDashboard },
-  { href: "/users", label: "ผู้ใช้/PIN", icon: Users },
-  { href: "/groups", label: "กลุ่ม", icon: MessagesSquare },
-  { href: "/knowledge", label: "คลังความรู้", icon: BookOpen },
-  { href: "/tickets", label: "งาน/ปัญหา", icon: Ticket },
+  { href: "/", label: "ภาพรวม", icon: LayoutDashboard },
+  { href: "/users", label: "จัดการ PIN พนักงาน", icon: Users },
+  { href: "/groups", label: "ลงทะเบียนกลุ่ม", icon: MessagesSquare },
+  { href: "/knowledge", label: "คลังคู่มือ AI", icon: BookOpen },
+  { href: "/tickets", label: "รายงานปัญหา", icon: Ticket },
 ];
 
 export const secondaryNav: NavItem[] = [

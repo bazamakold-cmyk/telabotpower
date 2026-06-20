@@ -1,6 +1,5 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 
@@ -9,14 +8,15 @@ export function ThemeToggle() {
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
+      variant="outline"
+      size="sm"
+      className="gap-2"
       aria-label="สลับธีมสว่าง / มืด"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
-      <Sun className="hidden size-5 dark:block" />
-      <Moon className="size-5 dark:hidden" />
-      <span className="sr-only">สลับธีม</span>
+      <span className="size-2 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]" />
+      <span className="hidden font-medium tracking-wide dark:inline">DARK</span>
+      <span className="font-medium tracking-wide dark:hidden">LIGHT</span>
     </Button>
   );
 }

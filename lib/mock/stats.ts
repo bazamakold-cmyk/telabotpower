@@ -8,18 +8,11 @@ export const mockKpis: Kpis = {
 };
 
 export const mockResponseTrend: ResponseTrendPoint[] = [
-  { label: "7 มิ.ย.", minutes: 3.8 },
-  { label: "8 มิ.ย.", minutes: 3.5 },
-  { label: "9 มิ.ย.", minutes: 4.1 },
-  { label: "10 มิ.ย.", minutes: 3.2 },
-  { label: "11 มิ.ย.", minutes: 2.9 },
-  { label: "12 มิ.ย.", minutes: 3.0 },
-  { label: "13 มิ.ย.", minutes: 2.7 },
-  { label: "14 มิ.ย.", minutes: 2.6 },
-  { label: "15 มิ.ย.", minutes: 2.8 },
-  { label: "16 มิ.ย.", minutes: 2.5 },
-  { label: "17 มิ.ย.", minutes: 2.3 },
-  { label: "18 มิ.ย.", minutes: 2.6 },
-  { label: "19 มิ.ย.", minutes: 2.4 },
-  { label: "20 มิ.ย.", minutes: 2.4 },
+  { label: "จ", minutes: 3.8, count: 52 },
+  { label: "อ", minutes: 3.5, count: 61 },
+  { label: "พ", minutes: 4.1, count: 48 },
+  { label: "พฤ", minutes: 3.2, count: 73 },
+  { label: "ศ", minutes: 2.9, count: 66 },
+  { label: "ส", minutes: 3.0, count: 58 },
+  { label: "อา", minutes: 2.7, count: 70 },
 ];

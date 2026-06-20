@@ -62,4 +62,4 @@ export type Kpis = {
   done: number;
 };
 
-export type ResponseTrendPoint = { label: string; minutes: number };
+export type ResponseTrendPoint = { label: string; minutes: number; count: number };
