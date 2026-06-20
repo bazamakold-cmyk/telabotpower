@@ -1,12 +1,20 @@
 "use client";
 
-import { FileText, HelpCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FileText, FolderPlus, HelpCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FileDropzone } from "@/components/file-dropzone";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,12 +44,26 @@ export function KnowledgeManager({
   collections: KnowledgeCollection[];
   initialDocs: KnowledgeDoc[];
 }) {
+  const [cols, setCols] = useState(collections);
   const [selected, setSelected] = useState(collections[0]?.id ?? "");
   const [docs, setDocs] = useState(initialDocs);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [newCol, setNewCol] = useState<{ name: string; description: string } | null>(null);
 
   const visible = docs.filter((d) => d.collectionId === selected);
+
+  function addCollection() {
+    if (!newCol || !newCol.name.trim()) return;
+    const id = `c-${Math.round(performance.now())}`;
+    setCols((p) => [
+      ...p,
+      { id, name: newCol.name.trim(), description: newCol.description.trim() || undefined },
+    ]);
+    setSelected(id);
+    setNewCol(null);
+    toast.success("เพิ่มหมวดหมู่แล้ว (จำลอง)");
+  }
 
   function addFiles(files: File[]) {
     const added: KnowledgeDoc[] = files.map((f, i) => ({
@@ -87,8 +109,8 @@ export function KnowledgeManager({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {collections.map((c) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {cols.map((c) => (
           <Button
             key={c.id}
             size="sm"
@@ -98,6 +120,9 @@ export function KnowledgeManager({
             {c.name}
           </Button>
         ))}
+        <Button size="sm" variant="ghost" onClick={() => setNewCol({ name: "", description: "" })}>
+          <FolderPlus className="size-4" /> เพิ่มหมวดหมู่
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -171,6 +196,54 @@ export function KnowledgeManager({
           </div>
         )}
       </section>
+
+      <Dialog open={newCol !== null} onOpenChange={(o) => !o && setNewCol(null)}>
+        <DialogContent>
+          {newCol && (
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                addCollection();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>เพิ่มหมวดหมู่คลังความรู้</DialogTitle>
+                <DialogDescription>
+                  สร้างชุดคลังความรู้ใหม่ แล้วผูกกับกลุ่มได้ที่หน้า “กลุ่ม”
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-1.5">
+                <Label htmlFor="col-name">ชื่อหมวดหมู่</Label>
+                <Input
+                  id="col-name"
+                  required
+                  value={newCol.name}
+                  onChange={(e) => setNewCol((c) => (c ? { ...c, name: e.target.value } : c))}
+                  placeholder="เช่น คู่มือสินค้าใหม่"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="col-desc">คำอธิบาย (ไม่บังคับ)</Label>
+                <Textarea
+                  id="col-desc"
+                  rows={2}
+                  value={newCol.description}
+                  onChange={(e) =>
+                    setNewCol((c) => (c ? { ...c, description: e.target.value } : c))
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setNewCol(null)}>
+                  ยกเลิก
+                </Button>
+                <Button type="submit">บันทึก</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
