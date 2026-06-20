@@ -1,33 +1,15 @@
 import { CheckCircle2, Clock, Loader, Sparkles } from "lucide-react";
+import { KpiCard } from "@/components/kpi-card";
 import { OnlineDot } from "@/components/online-dot";
+import { ResponseTrendChart } from "@/components/response-trend-chart";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { StatusTag } from "@/components/status-tag";
 import { UrgencyTag } from "@/components/urgency-tag";
-import type { TicketStatus, Urgency } from "@/lib/tags";
+import { getKpis, getResponseTrend } from "@/lib/services/stats";
+import { getTickets } from "@/lib/services/tickets";
+import type { Ticket } from "@/lib/types";
 
-const kpis = [
-  { label: "เวลาเฉลี่ยการตอบกลับ", value: "2.4 นาที", icon: Clock },
-  { label: "คะแนน AI ประเมินคุณภาพ", value: "8.7 / 10", icon: Sparkles },
-  { label: "งานสะสม (Working)", value: "12", icon: Loader },
-  { label: "งานสำเร็จ (Done)", value: "148", icon: CheckCircle2 },
-];
-
-type Row = {
-  id: string;
-  group: string;
-  admin: string;
-  online: boolean;
-  urgency: Urgency;
-  status: TicketStatus;
-};
-
-const rows: Row[] = [
-  { id: "TK-1042", group: "ลูกค้า VIP", admin: "สมชาย", online: true, urgency: "HIGH", status: "WORKING" },
-  { id: "TK-1041", group: "ซัพพอร์ตทั่วไป", admin: "อรพิน", online: false, urgency: "MEDIUM", status: "DONE" },
-  { id: "TK-1040", group: "ฝ่ายขาย", admin: "วิภา", online: true, urgency: "NORMAL", status: "DONE" },
-];
-
-const columns: Column<Row>[] = [
+const columns: Column<Ticket>[] = [
   { key: "id", header: "ID งาน", className: "font-mono" },
   { key: "group", header: "กลุ่ม" },
   {
@@ -36,7 +18,7 @@ const columns: Column<Row>[] = [
     render: (r) => (
       <span className="inline-flex items-center gap-2">
         {r.admin}
-        <OnlineDot online={r.online} />
+        <OnlineDot online={r.adminOnline} />
       </span>
     ),
   },
@@ -44,29 +26,29 @@ const columns: Column<Row>[] = [
   { key: "status", header: "สถานะ", render: (r) => <StatusTag status={r.status} /> },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [kpis, trend, tickets] = await Promise.all([getKpis(), getResponseTrend(), getTickets()]);
+  const recent = tickets.slice(0, 5);
+
   return (
     <main className="space-y-6">
       <h1 className="font-display text-2xl font-bold">แดชบอร์ดภาพรวม</h1>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          return (
-            <div key={k.label} className="glass rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{k.label}</span>
-                <Icon className="size-4 text-primary" aria-hidden />
-              </div>
-              <p className="mt-2 font-display text-2xl font-bold tabular-nums">{k.value}</p>
-            </div>
-          );
-        })}
+        <KpiCard label="เวลาเฉลี่ยการตอบกลับ" value={`${kpis.avgResponseMin} นาที`} icon={Clock} />
+        <KpiCard label="คะแนน AI ประเมินคุณภาพ" value={`${kpis.aiQualityScore} / 10`} icon={Sparkles} />
+        <KpiCard label="งานสะสม (Working)" value={String(kpis.working)} icon={Loader} />
+        <KpiCard label="งานสำเร็จ (Done)" value={String(kpis.done)} icon={CheckCircle2} />
       </div>
 
       <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold">แนวโน้มเวลาการตอบกลับ</h2>
+        <ResponseTrendChart data={trend} />
+      </section>
+
+      <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold">งานล่าสุด</h2>
-        <ResponsiveTable columns={columns} data={rows} getRowKey={(r) => r.id} />
+        <ResponsiveTable columns={columns} data={recent} getRowKey={(r) => r.id} />
       </section>
     </main>
   );
