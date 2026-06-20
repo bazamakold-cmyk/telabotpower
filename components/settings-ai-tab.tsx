@@ -50,7 +50,7 @@ export function SettingsAiTab() {
       <section className="glass grid gap-4 rounded-xl p-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="provider">Provider</Label>
-          <Select value={provider} onValueChange={setProvider}>
+          <Select value={provider} onValueChange={(v) => setProvider(v ?? "anthropic")}>
             <SelectTrigger id="provider">
               <SelectValue />
             </SelectTrigger>
@@ -62,7 +62,7 @@ export function SettingsAiTab() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="model">Chat model</Label>
-          <Select value={model} onValueChange={setModel}>
+          <Select value={model} onValueChange={(v) => setModel(v ?? model)}>
             <SelectTrigger id="model">
               <SelectValue />
             </SelectTrigger>
