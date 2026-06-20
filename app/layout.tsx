@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, IBM_Plex_Sans_Thai, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const fontDisplay = Chakra_Petch({
@@ -38,7 +40,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
     </html>
