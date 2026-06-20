@@ -1,10 +1,11 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OnlineDot } from "@/components/online-dot";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { EmptyState } from "@/components/states";
 import { StatusTag } from "@/components/status-tag";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ const emptyDraft = (): Ticket => ({
   admin: "",
   adminOnline: true,
   tag: "",
+  detail: "",
   urgency: "NORMAL",
   status: "WORKING",
   createdAt: "",
@@ -77,6 +79,7 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
   const [urgency, setUrgency] = useState<UrgencyFilter>("ALL");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [draft, setDraft] = useState<Ticket | null>(null);
+  const [viewing, setViewing] = useState<Ticket | null>(null);
 
   const groupNames = useMemo(
     () => Array.from(new Set(tickets.map((t) => t.group))).filter(Boolean),
@@ -130,11 +133,21 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
     { key: "status", header: "สถานะ", render: (r) => <StatusTag status={r.status} /> },
     {
       key: "actions",
-      header: "ปรับสถานะ",
+      header: "จัดการ",
       render: (r) => (
-        <Button size="sm" variant="outline" onClick={() => toggleStatus(r.id)}>
-          {r.status === "WORKING" ? "ทำเสร็จ" : "กลับมาทำ"}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="ดูรายละเอียด"
+            onClick={() => setViewing(r)}
+          >
+            <Eye className="size-4" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => toggleStatus(r.id)}>
+            {r.status === "WORKING" ? "ทำเสร็จ" : "กลับมาทำ"}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -178,7 +191,7 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
       />
 
       <Dialog open={draft !== null} onOpenChange={(o) => !o && setDraft(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           {draft && (
             <form
               className="space-y-4"
@@ -270,6 +283,14 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label>รายละเอียด</Label>
+                <RichTextEditor
+                  value={draft.detail ?? ""}
+                  onChange={(html) => setDraft((d) => (d ? { ...d, detail: html } : d))}
+                />
+              </div>
+
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setDraft(null)}>
                   ยกเลิก
@@ -277,6 +298,23 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
                 <Button type="submit">บันทึก</Button>
               </DialogFooter>
             </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewing !== null} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>รายละเอียดงาน {viewing?.id}</DialogTitle>
+            <DialogDescription>{viewing?.tag}</DialogDescription>
+          </DialogHeader>
+          {viewing?.detail ? (
+            <div
+              className="max-w-none text-sm [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1 [&_ul]:list-disc [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: viewing.detail }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">ยังไม่มีรายละเอียด</p>
           )}
         </DialogContent>
       </Dialog>

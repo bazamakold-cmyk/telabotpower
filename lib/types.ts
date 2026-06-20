@@ -50,6 +50,8 @@ export type Ticket = {
   admin: string;
   adminOnline: boolean;
   tag: string;
+  /** rich-text (HTML) details */
+  detail?: string;
   urgency: Urgency;
   status: TicketStatus;
   createdAt: string;
