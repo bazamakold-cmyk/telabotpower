@@ -27,6 +27,7 @@ export type AiSettings = {
   systemPrompt: string;
   ragTopK: number;
   ragMinScore: number;
+  autoReplyMinConfidence: number;
 };
 
 const DEFAULT_SYSTEM_PROMPT = [
@@ -41,7 +42,8 @@ const DEFAULTS: AiSettings = {
   embedModel: "voyage-3",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   ragTopK: 5,
-  ragMinScore: 0.75,
+  ragMinScore: 0.4,
+  autoReplyMinConfidence: 0.5,
 };
 
 export async function getAiSettings(): Promise<AiSettings> {
@@ -54,6 +56,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     systemPrompt: s.systemPrompt?.trim() || DEFAULT_SYSTEM_PROMPT,
     ragTopK: s.ragTopK,
     ragMinScore: s.ragMinScore,
+    autoReplyMinConfidence: s.autoReplyMinConfidence,
   };
 }
 
