@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,6 +37,12 @@ import type { Ticket, TicketStatus, Urgency } from "@/lib/types";
 
 type UrgencyFilter = Urgency | "ALL";
 type StatusFilter = TicketStatus | "ALL";
+
+const STATUS_OPTIONS: [TicketStatus, string][] = [
+  ["RECEIVED", "รับเรื่อง"],
+  ["WORKING", "กำลังทำ"],
+  ["DONE", "เสร็จแล้ว"],
+];
 
 function FilterGroup<T extends string>({
   label,
@@ -70,11 +82,17 @@ const emptyDraft = (): Ticket => ({
   tag: "",
   detail: "",
   urgency: "NORMAL",
-  status: "WORKING",
+  status: "RECEIVED",
   createdAt: "",
 });
 
-export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
+export function TicketsTable({
+  tickets: initial,
+  currentAdmin,
+}: {
+  tickets: Ticket[];
+  currentAdmin: string;
+}) {
   const [tickets, setTickets] = useState(initial);
   const [urgency, setUrgency] = useState<UrgencyFilter>("ALL");
   const [status, setStatus] = useState<StatusFilter>("ALL");
@@ -86,12 +104,8 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
     [tickets]
   );
 
-  function toggleStatus(id: string) {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, status: t.status === "WORKING" ? "DONE" : "WORKING" } : t
-      )
-    );
+  function setStatusOf(id: string, next: TicketStatus) {
+    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status: next } : t)));
     toast.success("ปรับสถานะแล้ว (จำลอง)");
   }
 
@@ -144,9 +158,18 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
           >
             <Eye className="size-4" />
           </Button>
-          <Button size="sm" variant="outline" onClick={() => toggleStatus(r.id)}>
-            {r.status === "WORKING" ? "ทำเสร็จ" : "กลับมาทำ"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
+              ปรับสถานะ
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {STATUS_OPTIONS.map(([val, text]) => (
+                <DropdownMenuItem key={val} onClick={() => setStatusOf(r.id, val)}>
+                  {text}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -171,14 +194,10 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
             label="สถานะ"
             value={status}
             onChange={setStatus}
-            options={[
-              ["ALL", "ทั้งหมด"],
-              ["WORKING", "กำลังทำ"],
-              ["DONE", "เสร็จแล้ว"],
-            ]}
+            options={[["ALL", "ทั้งหมด"], ...STATUS_OPTIONS]}
           />
         </div>
-        <Button onClick={() => setDraft(emptyDraft())}>
+        <Button onClick={() => setDraft({ ...emptyDraft(), admin: currentAdmin })}>
           <Plus className="size-4" /> เพิ่มงาน
         </Button>
       </div>
@@ -225,13 +244,14 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="t-admin">แอดมินผู้รับเรื่อง</Label>
-                <Input
-                  id="t-admin"
-                  required
-                  value={draft.admin}
-                  onChange={(e) => setDraft((d) => (d ? { ...d, admin: e.target.value } : d))}
-                />
+                <Label>แอดมินผู้รับเรื่อง</Label>
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                  <OnlineDot online />
+                  {draft.admin}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ระบบบันทึกเป็นแอดมินที่กำลังเข้าสู่ระบบโดยอัตโนมัติ
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -276,8 +296,11 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="WORKING">กำลังทำ</SelectItem>
-                      <SelectItem value="DONE">เสร็จแล้ว</SelectItem>
+                      {STATUS_OPTIONS.map(([val, text]) => (
+                        <SelectItem key={val} value={val}>
+                          {text}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -288,6 +311,7 @@ export function TicketsTable({ tickets: initial }: { tickets: Ticket[] }) {
                 <RichTextEditor
                   value={draft.detail ?? ""}
                   onChange={(html) => setDraft((d) => (d ? { ...d, detail: html } : d))}
+                  aiRewrite
                 />
               </div>
 

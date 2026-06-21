@@ -1,5 +1,5 @@
 export type Urgency = "HIGH" | "MEDIUM" | "NORMAL";
-export type TicketStatus = "WORKING" | "DONE";
+export type TicketStatus = "RECEIVED" | "WORKING" | "DONE";
 export type Token = "danger" | "warn" | "info" | "working" | "success";
 
 export type TagMeta = { label: string; token: Token };
@@ -16,7 +16,12 @@ export function urgencyMeta(u: Urgency): TagMeta {
 }
 
 export function statusMeta(s: TicketStatus): TagMeta {
-  return s === "WORKING"
-    ? { label: "กำลังทำ", token: "working" }
-    : { label: "ทำเสร็จแล้ว", token: "success" };
+  switch (s) {
+    case "RECEIVED":
+      return { label: "รับเรื่อง", token: "info" };
+    case "WORKING":
+      return { label: "กำลังทำ", token: "working" };
+    case "DONE":
+      return { label: "ทำเสร็จแล้ว", token: "success" };
+  }
 }

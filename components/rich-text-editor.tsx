@@ -2,9 +2,16 @@
 
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { Bold, Italic, List, ListOrdered } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+function esc(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 function ToolbarButton({
   active,
@@ -22,7 +29,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      aria-pressed={active}
+      data-active={active}
       className={cn(
         "grid size-8 place-items-center rounded-md border transition-colors",
         active
@@ -38,10 +45,13 @@ function ToolbarButton({
 export function RichTextEditor({
   value,
   onChange,
+  aiRewrite = false,
 }: {
   value: string;
   onChange: (html: string) => void;
+  aiRewrite?: boolean;
 }) {
+  const [busy, setBusy] = useState(false);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [StarterKit],
@@ -57,9 +67,31 @@ export function RichTextEditor({
 
   if (!editor) return null;
 
+  async function rewriteWithAi() {
+    if (!editor) return;
+    const text = editor.getText().trim();
+    if (!text) {
+      toast.message("ยังไม่มีข้อความให้เรียบเรียง");
+      return;
+    }
+    setBusy(true);
+    await new Promise((r) => setTimeout(r, 700));
+    const items = text
+      .split(/[\n.]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const html = `<p><strong>รายละเอียด (เรียบเรียงโดย AI)</strong></p><ul>${items
+      .map((i) => `<li>${esc(i)}</li>`)
+      .join("")}</ul>`;
+    editor.commands.setContent(html);
+    onChange(editor.getHTML());
+    setBusy(false);
+    toast.success("เรียบเรียงด้วย AI แล้ว (จำลอง)");
+  }
+
   return (
     <div className="space-y-2">
-      <div className="flex gap-1">
+      <div className="flex items-center gap-1">
         <ToolbarButton
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -88,6 +120,20 @@ export function RichTextEditor({
         >
           <ListOrdered className="size-4" />
         </ToolbarButton>
+
+        {aiRewrite && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="ml-auto gap-1.5"
+            disabled={busy}
+            onClick={rewriteWithAi}
+          >
+            <Sparkles className="size-4 text-primary" />
+            {busy ? "กำลังเรียบเรียง…" : "เรียบเรียงด้วย AI"}
+          </Button>
+        )}
       </div>
       <EditorContent editor={editor} />
     </div>
