@@ -172,7 +172,7 @@ model AiSetting {
   chatModel              String   @default("claude-sonnet-4-6")
   embedModel             String   @default("voyage-3")
   systemPrompt           String?
-  autoReplyMinConfidence Float    @default(0.7)
+  autoReplyMinConfidence Float    @default(0.5) // cosine scale; >= ragMinScore. Below this → draft, not auto-send
   ragTopK                Int      @default(5)
   ragMinScore            Float    @default(0.4) // voyage-3 cosine: relevant ~0.4-0.6, noise ~0.1
   scoringEnabled         Boolean  @default(true)

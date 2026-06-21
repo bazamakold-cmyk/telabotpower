@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { getAiSettings } from "@/lib/ai";
 import { db } from "@/lib/db";
+import { decideBotAction, ragAnswer } from "@/lib/rag";
+import { sendMessage } from "@/lib/telegram";
 
 export const runtime = "nodejs";
 
@@ -44,9 +47,67 @@ export async function POST(req: Request) {
           sentAt: msg.date ? new Date(msg.date * 1000) : new Date(),
         },
       });
+
+      // A customer asked something → let the bot answer / draft from the group's knowledge.
+      if (!admin && group.botMode !== "OFF") {
+        await maybeAutoReply(group, msg.text, bot?.aiAutoReply ?? true);
+      }
     }
   }
 
   // Always 200 so Telegram won't keep retrying.
   return NextResponse.json({ ok: true });
+}
+
+type GroupForReply = {
+  id: string;
+  chatId: string;
+  purpose: string | null;
+  botMode: "AUTO_REPLY" | "DRAFT" | "OFF";
+};
+
+/** RAG-answer a customer message, then auto-send (AUTO_REPLY) or queue a draft (DRAFT). */
+async function maybeAutoReply(group: GroupForReply, question: string, globalAutoReply: boolean) {
+  try {
+    const collections = await db.knowledgeCollection.findMany({
+      where: { groups: { some: { id: group.id } } },
+      select: { id: true },
+    });
+    const collectionIds = collections.map((c) => c.id);
+    if (collectionIds.length === 0) return;
+
+    const settings = await getAiSettings();
+    const r = await ragAnswer({
+      collectionIds,
+      question,
+      extraSystem: group.purpose ?? undefined,
+      settings,
+    });
+
+    const action = decideBotAction({
+      globalAutoReply,
+      botMode: group.botMode,
+      hadContext: r.hadContext,
+      confidence: r.confidence,
+      autoReplyMinConfidence: settings.autoReplyMinConfidence,
+    });
+    if (action === "none" || !r.answer) return;
+
+    if (action === "send") {
+      const sent = await sendMessage(group.chatId, r.answer);
+      if (sent.ok) {
+        await db.chatMessage.create({
+          data: { groupId: group.id, tgUserId: "bot", role: "BOT", text: r.answer, sentAt: new Date() },
+        });
+        return;
+      }
+      // Delivery failed → fall back to a draft so an admin can follow up.
+    }
+
+    await db.aiDraft.create({
+      data: { groupId: group.id, sourceMsg: question, draftText: r.answer, status: "PENDING" },
+    });
+  } catch {
+    // Swallow — auto-reply must never make Telegram retry the webhook.
+  }
 }
