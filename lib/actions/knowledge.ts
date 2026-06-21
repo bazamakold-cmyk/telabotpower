@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { indexDoc } from "@/lib/ingest";
 import { requireRole } from "@/lib/session";
 import { USE_MOCK } from "@/lib/use-mock";
 
@@ -36,16 +37,19 @@ export async function createFaq(
     return { ok: false, error: "ข้อมูลไม่ครบ" };
   }
   if (USE_MOCK) return { ok: true };
-  await db.knowledgeDoc.create({
+  const doc = await db.knowledgeDoc.create({
     data: {
       collectionId,
       type: "FAQ",
       title: question.trim(),
       question: question.trim(),
       answer: answer.trim(),
-      status: "READY",
+      status: "PENDING",
     },
   });
+  // Best-effort RAG indexing. If keys aren't set yet, indexDoc leaves the doc PENDING
+  // (the FAQ is still saved) and it can be reindexed later from the UI.
+  await indexDoc(doc.id);
   revalidatePath("/knowledge");
   return { ok: true };
 }

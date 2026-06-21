@@ -1,9 +1,10 @@
 "use client";
 
-import { FileText, FolderPlus, HelpCircle, Plus, Trash2, X } from "lucide-react";
+import { FileText, FolderPlus, HelpCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { reindexCollection } from "@/lib/actions/ingest";
 import {
   createCollection,
   createFaq,
@@ -126,7 +127,22 @@ export function KnowledgeManager({
   }
 
   function uploadFiles(files: File[]) {
-    toast.message(`เลือก ${files.length} ไฟล์ — การอัปโหลดไฟล์จะเปิดใช้ใน Phase 6 (Vercel Blob)`);
+    toast.message(`เลือก ${files.length} ไฟล์ — การอัปโหลดไฟล์ (Vercel Blob) จะเปิดใช้ในเฟสถัดไป`);
+  }
+
+  function reindex() {
+    if (!selected) return;
+    startTransition(async () => {
+      const res = await reindexCollection(selected);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(
+        `สร้างดัชนีแล้ว ${res.indexed} เอกสาร${res.failed ? ` (ข้าม ${res.failed})` : ""}`
+      );
+      router.refresh();
+    });
   }
 
   return (
@@ -155,6 +171,17 @@ export function KnowledgeManager({
         <Button size="sm" variant="ghost" onClick={() => setNewCol({ name: "", description: "" })}>
           <FolderPlus className="size-4" /> เพิ่มหมวดหมู่
         </Button>
+        {selected && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={reindex}
+            title="สร้าง embedding ของเอกสารในคลังนี้ใหม่ (ใช้หลังเพิ่ม API key)"
+          >
+            <RefreshCw className="size-4" /> สร้างดัชนี (RAG)
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

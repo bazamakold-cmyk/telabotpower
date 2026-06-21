@@ -2,6 +2,8 @@
 
 import { Bot, Send, Sparkles, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { askAssistant, type AskSource } from "@/lib/actions/assistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +16,13 @@ import {
 import type { KnowledgeCollection } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Msg = { id: string; role: "user" | "ai"; text: string };
+type Msg = {
+  id: string;
+  role: "user" | "ai";
+  text: string;
+  sources?: AskSource[];
+  confidence?: number;
+};
 
 const SUGGESTIONS = [
   "ค่าจัดส่งเท่าไหร่?",
@@ -22,20 +30,6 @@ const SUGGESTIONS = [
   "เงื่อนไขการสมัครตัวแทนจำหน่าย",
   "นโยบายการคืนสินค้า",
 ];
-
-function mockAnswer(q: string, kbName: string): string {
-  const t = q.toLowerCase();
-  let body =
-    "นี่คือคำตอบที่แนะนำ (ตัวอย่างจำลอง) — เมื่อต่อ backend จริงจะดึงจากเอกสาร/FAQ ด้วย RAG + Claude";
-  if (q.includes("จัดส่ง") || q.includes("ค่าส่ง") || t.includes("ship")) {
-    body = "ค่าจัดส่งเริ่มต้น 40 บาท ส่งฟรีเมื่อซื้อครบ 1,000 บาท";
-  } else if (q.includes("รหัส") || q.includes("รีเซ็ต") || t.includes("password")) {
-    body = "ให้ลูกค้าไปที่ ตั้งค่า > ความปลอดภัย > รีเซ็ตรหัสผ่าน";
-  } else if (q.includes("ตัวแทน")) {
-    body = "เปิดรับสมัครตัวแทน ขั้นต่ำสั่งซื้อ 5,000 บาท/เดือน รับส่วนลด 20%";
-  }
-  return `จากคลัง “${kbName}”: ${body} ครับ`;
-}
 
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
@@ -49,13 +43,34 @@ function Bubble({ msg }: { msg: Msg }) {
       >
         {isUser ? <User className="size-4" /> : <Bot className="size-4" />}
       </span>
-      <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
-          isUser ? "bg-primary text-primary-foreground" : "border border-border bg-card"
+      <div className="max-w-[80%] space-y-1">
+        <div
+          className={cn(
+            "whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm",
+            isUser ? "bg-primary text-primary-foreground" : "border border-border bg-card"
+          )}
+        >
+          {msg.text}
+        </div>
+        {!isUser && msg.sources && msg.sources.length > 0 && (
+          <details className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs">
+            <summary className="cursor-pointer text-muted-foreground">
+              อ้างอิง {msg.sources.length} รายการ
+              {typeof msg.confidence === "number" &&
+                ` · ความมั่นใจ ${Math.round(msg.confidence * 100)}%`}
+            </summary>
+            <ul className="mt-2 space-y-1.5">
+              {msg.sources.map((s, i) => (
+                <li
+                  key={i}
+                  className="whitespace-pre-wrap rounded-lg border border-border bg-background/60 p-2 text-muted-foreground"
+                >
+                  {s.content}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
-      >
-        {msg.text}
       </div>
     </div>
   );
@@ -67,6 +82,8 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const seq = useRef(0);
+  const newId = (prefix: string) => `${prefix}-${seq.current++}`;
 
   const kbName = collections.find((c) => c.id === kb)?.name ?? "";
 
@@ -77,18 +94,26 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
   async function ask(q: string) {
     const question = q.trim();
     if (!kb || !question || thinking) return;
-    setMessages((m) => [
-      ...m,
-      { id: `u-${Math.round(performance.now())}`, role: "user", text: question },
-    ]);
+    setMessages((m) => [...m, { id: newId("u"), role: "user", text: question }]);
     setInput("");
     setThinking(true);
-    await new Promise((r) => setTimeout(r, 700));
-    setMessages((m) => [
-      ...m,
-      { id: `a-${Math.round(performance.now())}`, role: "ai", text: mockAnswer(question, kbName) },
-    ]);
+    const res = await askAssistant(kb, question);
     setThinking(false);
+    if (res.ok) {
+      setMessages((m) => [
+        ...m,
+        {
+          id: newId("a"),
+          role: "ai",
+          text: res.answer,
+          sources: res.sources,
+          confidence: res.confidence,
+        },
+      ]);
+    } else {
+      toast.error(res.error);
+      setMessages((m) => [...m, { id: newId("a"), role: "ai", text: `⚠️ ${res.error}` }]);
+    }
   }
 
   return (
