@@ -1,9 +1,11 @@
 "use client";
 
-import { FileText, FolderPlus, HelpCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FileText, FolderPlus, HelpCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { deleteCollection } from "@/lib/actions/knowledge";
 import { FileDropzone } from "@/components/file-dropzone";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -50,8 +52,14 @@ export function KnowledgeManager({
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [newCol, setNewCol] = useState<{ name: string; description: string } | null>(null);
+  const [confirmDel, setConfirmDel] = useState<KnowledgeCollection | null>(null);
+  const [deleting, startDelete] = useTransition();
+  const router = useRouter();
 
   const visible = docs.filter((d) => d.collectionId === selected);
+  const delDocCount = confirmDel
+    ? docs.filter((d) => d.collectionId === confirmDel.id).length
+    : 0;
 
   function addCollection() {
     if (!newCol || !newCol.name.trim()) return;
@@ -63,6 +71,36 @@ export function KnowledgeManager({
     setSelected(id);
     setNewCol(null);
     toast.success("เพิ่มหมวดหมู่แล้ว (จำลอง)");
+  }
+
+  function removeColLocal(target: KnowledgeCollection, docCount: number) {
+    const next = cols.filter((c) => c.id !== target.id);
+    setCols(next);
+    setDocs((prev) => prev.filter((d) => d.collectionId !== target.id));
+    if (selected === target.id) setSelected(next[0]?.id ?? "");
+    setConfirmDel(null);
+    const tail = docCount > 0 ? ` และเอกสาร ${docCount} รายการ` : "";
+    toast.success(`ลบหมวดหมู่ “${target.name}”${tail} แล้ว`);
+  }
+
+  function confirmDelete() {
+    const target = confirmDel;
+    if (!target) return;
+    // Categories added locally (still mock) aren't in the DB yet — drop them
+    // from the UI without hitting the server.
+    if (target.id.startsWith("c-")) {
+      removeColLocal(target, delDocCount);
+      return;
+    }
+    startDelete(async () => {
+      const res = await deleteCollection(target.id);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      removeColLocal(target, res.deletedDocs);
+      router.refresh();
+    });
   }
 
   function addFiles(files: File[]) {
@@ -111,14 +149,24 @@ export function KnowledgeManager({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         {cols.map((c) => (
-          <Button
-            key={c.id}
-            size="sm"
-            variant={selected === c.id ? "default" : "outline"}
-            onClick={() => setSelected(c.id)}
-          >
-            {c.name}
-          </Button>
+          <div key={c.id} className="inline-flex items-center gap-0.5">
+            <Button
+              size="sm"
+              variant={selected === c.id ? "default" : "outline"}
+              onClick={() => setSelected(c.id)}
+            >
+              {c.name}
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              aria-label={`ลบหมวดหมู่ ${c.name}`}
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setConfirmDel(c)}
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
         ))}
         <Button size="sm" variant="ghost" onClick={() => setNewCol({ name: "", description: "" })}>
           <FolderPlus className="size-4" /> เพิ่มหมวดหมู่
@@ -242,6 +290,39 @@ export function KnowledgeManager({
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmDel !== null}
+        onOpenChange={(o) => {
+          if (!o && !deleting) setConfirmDel(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ลบหมวดหมู่นี้?</DialogTitle>
+            <DialogDescription>
+              ลบ “{confirmDel?.name}” อย่างถาวร
+              {delDocCount > 0
+                ? ` พร้อมเอกสารทั้งหมด ${delDocCount} รายการในหมวดนี้`
+                : ""}{" "}
+              — กู้คืนไม่ได้
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={deleting}
+              onClick={() => setConfirmDel(null)}
+            >
+              ยกเลิก
+            </Button>
+            <Button type="button" variant="destructive" disabled={deleting} onClick={confirmDelete}>
+              {deleting ? "กำลังลบ…" : "ลบถาวร"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { groupCreateSchema } from "@/lib/validators";
+
+export const runtime = "nodejs";
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const parsed = groupCreateSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  }
+  const d = parsed.data;
+  try {
+    await db.telegramGroup.update({
+      where: { id },
+      data: {
+        ...(d.name !== undefined ? { name: d.name } : {}),
+        ...(d.chatId !== undefined ? { chatId: d.chatId } : {}),
+        ...(d.purpose !== undefined ? { purpose: d.purpose || null } : {}),
+        ...(d.botMode !== undefined ? { botMode: d.botMode } : {}),
+        ...(d.collectionIds !== undefined
+          ? { collections: { set: d.collectionIds.map((cid) => ({ id: cid })) } }
+          : {}),
+      },
+    });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "อัปเดตไม่สำเร็จ (Chat ID ซ้ำ?)" }, { status: 409 });
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  await db.telegramGroup.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

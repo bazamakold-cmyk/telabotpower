@@ -2,7 +2,12 @@
 
 import { UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+const ALLOWED_EXT = [".txt", ".md"];
+const isAllowed = (file: File) =>
+  ALLOWED_EXT.some((ext) => file.name.toLowerCase().endsWith(ext));
 
 export function FileDropzone({ onFiles }: { onFiles: (files: File[]) => void }) {
   const [dragging, setDragging] = useState(false);
@@ -10,7 +15,13 @@ export function FileDropzone({ onFiles }: { onFiles: (files: File[]) => void }) 
 
   function handle(files: FileList | null) {
     if (!files || files.length === 0) return;
-    onFiles(Array.from(files));
+    const all = Array.from(files);
+    const allowed = all.filter(isAllowed);
+    const rejected = all.length - allowed.length;
+    if (rejected > 0) {
+      toast.error(`รองรับเฉพาะไฟล์ .txt และ .md — ข้าม ${rejected} ไฟล์ที่ไม่รองรับ`);
+    }
+    if (allowed.length > 0) onFiles(allowed);
   }
 
   return (
@@ -38,11 +49,11 @@ export function FileDropzone({ onFiles }: { onFiles: (files: File[]) => void }) 
     >
       <UploadCloud className="size-8 text-primary" aria-hidden />
       <p className="text-sm font-medium">ลากและวางไฟล์ที่นี่ หรือคลิกเพื่อเลือก</p>
-      <p className="text-xs text-muted-foreground">รองรับ PDF, DOCX, TXT</p>
+      <p className="text-xs text-muted-foreground">รองรับเฉพาะ .txt และ .md</p>
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.txt"
+        accept=".txt,.md,text/plain,text/markdown"
         multiple
         className="hidden"
         onChange={(e) => handle(e.target.files)}

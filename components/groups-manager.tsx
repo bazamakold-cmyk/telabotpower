@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Plus, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
@@ -69,9 +70,10 @@ export function GroupsManager({
   initialGroups: TelegramGroup[];
   collections: KnowledgeCollection[];
 }) {
-  const [groups, setGroups] = useState(initialGroups);
+  const router = useRouter();
   const [editing, setEditing] = useState<TelegramGroup | null>(null);
   const [pinging, setPinging] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function ping(g: TelegramGroup) {
     setPinging(g.id);
@@ -80,16 +82,36 @@ export function GroupsManager({
     toast.success(`ส่งข้อความทดสอบเข้า “${g.name}” สำเร็จ (จำลอง)`);
   }
 
-  function save() {
+  async function save() {
     if (!editing) return;
-    if (editing.id) {
-      setGroups((p) => p.map((g) => (g.id === editing.id ? editing : g)));
-      toast.success("บันทึกกลุ่มแล้ว (จำลอง)");
+    setBusy(true);
+    const payload = {
+      name: editing.name,
+      chatId: editing.chatId,
+      purpose: editing.purpose || undefined,
+      botMode: editing.botMode,
+      collectionIds: editing.collectionIds,
+    };
+    const res = editing.id
+      ? await fetch(`/api/groups/${editing.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/groups", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(editing.id ? "บันทึกกลุ่มแล้ว" : "เพิ่มกลุ่มแล้ว");
+      setEditing(null);
+      router.refresh();
     } else {
-      setGroups((p) => [{ ...editing, id: `g${p.length + 1}` }, ...p]);
-      toast.success("เพิ่มกลุ่มแล้ว (จำลอง)");
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "บันทึกไม่สำเร็จ");
     }
-    setEditing(null);
   }
 
   function toggleCollection(id: string) {
@@ -131,7 +153,7 @@ export function GroupsManager({
         </Button>
       </div>
 
-      <ResponsiveTable columns={columns} data={groups} getRowKey={(g) => g.id} />
+      <ResponsiveTable columns={columns} data={initialGroups} getRowKey={(g) => g.id} />
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
@@ -205,6 +227,9 @@ export function GroupsManager({
               <div className="space-y-2">
                 <Label>คลังความรู้ที่ใช้ตอบ</Label>
                 <div className="space-y-2 rounded-lg border p-3">
+                  {collections.length === 0 && (
+                    <p className="text-xs text-muted-foreground">ยังไม่มีคลังความรู้ — สร้างที่หน้า “คลังคู่มือ AI”</p>
+                  )}
                   {collections.map((c) => (
                     <label key={c.id} className="flex items-center gap-2 text-sm">
                       <Checkbox
@@ -221,7 +246,9 @@ export function GroupsManager({
                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
                   ยกเลิก
                 </Button>
-                <Button type="submit">บันทึก</Button>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "กำลังบันทึก…" : "บันทึก"}
+                </Button>
               </DialogFooter>
             </form>
           )}

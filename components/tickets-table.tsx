@@ -1,6 +1,7 @@
 "use client";
 
 import { Eye, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { OnlineDot } from "@/components/online-dot";
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UrgencyTag } from "@/components/urgency-tag";
-import type { Ticket, TicketStatus, Urgency } from "@/lib/types";
+import type { TelegramGroup, Ticket, TicketStatus, Urgency } from "@/lib/types";
 
 type UrgencyFilter = Urgency | "ALL";
 type StatusFilter = TicketStatus | "ALL";
@@ -43,6 +44,16 @@ const STATUS_OPTIONS: [TicketStatus, string][] = [
   ["WORKING", "กำลังทำ"],
   ["DONE", "เสร็จแล้ว"],
 ];
+
+type Draft = {
+  groupId: string;
+  tag: string;
+  detail: string;
+  urgency: Urgency;
+  status: TicketStatus;
+};
+
+const emptyDraft = (): Draft => ({ groupId: "", tag: "", detail: "", urgency: "NORMAL", status: "RECEIVED" });
 
 function FilterGroup<T extends string>({
   label,
@@ -74,47 +85,58 @@ function FilterGroup<T extends string>({
   );
 }
 
-const emptyDraft = (): Ticket => ({
-  id: "",
-  group: "",
-  admin: "",
-  adminOnline: true,
-  tag: "",
-  detail: "",
-  urgency: "NORMAL",
-  status: "RECEIVED",
-  createdAt: "",
-});
-
 export function TicketsTable({
-  tickets: initial,
+  tickets,
   currentAdmin,
+  groups,
 }: {
   tickets: Ticket[];
   currentAdmin: string;
+  groups: TelegramGroup[];
 }) {
-  const [tickets, setTickets] = useState(initial);
+  const router = useRouter();
   const [urgency, setUrgency] = useState<UrgencyFilter>("ALL");
   const [status, setStatus] = useState<StatusFilter>("ALL");
-  const [draft, setDraft] = useState<Ticket | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState<Ticket | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const groupNames = useMemo(
-    () => Array.from(new Set(tickets.map((t) => t.group))).filter(Boolean),
-    [tickets]
-  );
-
-  function setStatusOf(id: string, next: TicketStatus) {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, status: next } : t)));
-    toast.success("ปรับสถานะแล้ว (จำลอง)");
+  async function setStatusOf(id: string, next: TicketStatus) {
+    const res = await fetch(`/api/tickets/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    });
+    if (res.ok) {
+      toast.success("ปรับสถานะแล้ว");
+      router.refresh();
+    } else {
+      toast.error("ปรับสถานะไม่สำเร็จ");
+    }
   }
 
-  function addTicket() {
+  async function addTicket() {
     if (!draft) return;
-    const id = `TK-${1043 + tickets.length}`;
-    setTickets((prev) => [{ ...draft, id, createdAt: new Date().toISOString() }, ...prev]);
-    toast.success("เพิ่มงานแล้ว (จำลอง)");
-    setDraft(null);
+    setBusy(true);
+    const res = await fetch("/api/tickets", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        groupId: draft.groupId || undefined,
+        tag: draft.tag,
+        detail: draft.detail || undefined,
+        urgency: draft.urgency,
+        status: draft.status,
+      }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success("เพิ่มงานแล้ว");
+      setDraft(null);
+      router.refresh();
+    } else {
+      toast.error("เพิ่มงานไม่สำเร็จ");
+    }
   }
 
   const filtered = useMemo(
@@ -150,12 +172,7 @@ export function TicketsTable({
       header: "จัดการ",
       render: (r) => (
         <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="ดูรายละเอียด"
-            onClick={() => setViewing(r)}
-          >
+          <Button size="icon" variant="ghost" aria-label="ดูรายละเอียด" onClick={() => setViewing(r)}>
             <Eye className="size-4" />
           </Button>
           <DropdownMenu>
@@ -197,7 +214,7 @@ export function TicketsTable({
             options={[["ALL", "ทั้งหมด"], ...STATUS_OPTIONS]}
           />
         </div>
-        <Button onClick={() => setDraft({ ...emptyDraft(), admin: currentAdmin })}>
+        <Button onClick={() => setDraft(emptyDraft())}>
           <Plus className="size-4" /> เพิ่มงาน
         </Button>
       </div>
@@ -227,16 +244,16 @@ export function TicketsTable({
               <div className="space-y-1.5">
                 <Label htmlFor="t-group">กลุ่ม</Label>
                 <Select
-                  value={draft.group}
-                  onValueChange={(v) => setDraft((d) => (d ? { ...d, group: v ?? "" } : d))}
+                  value={draft.groupId}
+                  onValueChange={(v) => setDraft((d) => (d ? { ...d, groupId: v ?? "" } : d))}
                 >
                   <SelectTrigger id="t-group">
                     <SelectValue placeholder="เลือกกลุ่ม" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groupNames.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -247,7 +264,7 @@ export function TicketsTable({
                 <Label>แอดมินผู้รับเรื่อง</Label>
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   <OnlineDot online />
-                  {draft.admin}
+                  {currentAdmin}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   ระบบบันทึกเป็นแอดมินที่กำลังเข้าสู่ระบบโดยอัตโนมัติ
@@ -270,9 +287,7 @@ export function TicketsTable({
                   <Label htmlFor="t-urgency">ความเร่งด่วน</Label>
                   <Select
                     value={draft.urgency}
-                    onValueChange={(v) =>
-                      setDraft((d) => (d ? { ...d, urgency: v as Urgency } : d))
-                    }
+                    onValueChange={(v) => setDraft((d) => (d ? { ...d, urgency: v as Urgency } : d))}
                   >
                     <SelectTrigger id="t-urgency">
                       <SelectValue />
@@ -309,7 +324,7 @@ export function TicketsTable({
               <div className="space-y-1.5">
                 <Label>รายละเอียด</Label>
                 <RichTextEditor
-                  value={draft.detail ?? ""}
+                  value={draft.detail}
                   onChange={(html) => setDraft((d) => (d ? { ...d, detail: html } : d))}
                   aiRewrite
                 />
@@ -319,7 +334,9 @@ export function TicketsTable({
                 <Button type="button" variant="ghost" onClick={() => setDraft(null)}>
                   ยกเลิก
                 </Button>
-                <Button type="submit">บันทึก</Button>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "กำลังบันทึก…" : "บันทึก"}
+                </Button>
               </DialogFooter>
             </form>
           )}
@@ -329,7 +346,7 @@ export function TicketsTable({
       <Dialog open={viewing !== null} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>รายละเอียดงาน {viewing?.id}</DialogTitle>
+            <DialogTitle>รายละเอียดงาน {viewing?.code ?? viewing?.id}</DialogTitle>
             <DialogDescription>{viewing?.tag}</DialogDescription>
           </DialogHeader>
           {viewing?.detail ? (

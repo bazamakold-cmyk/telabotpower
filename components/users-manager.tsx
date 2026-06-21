@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OnlineDot } from "@/components/online-dot";
@@ -41,27 +42,62 @@ const emptyDraft = (): User => ({
 });
 
 export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const router = useRouter();
   const [editing, setEditing] = useState<User | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
+  const [pin, setPin] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function save() {
-    if (!editing) return;
-    if (editing.id) {
-      setUsers((prev) => prev.map((u) => (u.id === editing.id ? editing : u)));
-      toast.success("บันทึกผู้ใช้แล้ว (จำลอง)");
-    } else {
-      setUsers((prev) => [{ ...editing, id: `u${prev.length + 1}-${Math.round(performance.now())}` }, ...prev]);
-      toast.success("เพิ่มผู้ใช้แล้ว (จำลอง)");
-    }
-    setEditing(null);
+  function openAdd() {
+    setEditing(emptyDraft());
+    setPin("");
+  }
+  function openEdit(u: User) {
+    setEditing(u);
+    setPin("");
   }
 
-  function confirmDelete() {
+  async function save() {
+    if (!editing) return;
+    setBusy(true);
+    const payload = {
+      name: editing.name,
+      role: editing.role,
+      telegramId: editing.telegramId || undefined,
+      ...(pin.length === 6 ? { pin } : {}),
+    };
+    const res = editing.id
+      ? await fetch(`/api/users/${editing.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/users", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(editing.id ? "บันทึกผู้ใช้แล้ว" : "เพิ่มผู้ใช้แล้ว");
+      setEditing(null);
+      router.refresh();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "บันทึกไม่สำเร็จ");
+    }
+  }
+
+  async function confirmDelete() {
     if (!deleting) return;
-    setUsers((prev) => prev.filter((u) => u.id !== deleting.id));
-    toast.success(`ลบ ${deleting.name} แล้ว (จำลอง)`);
-    setDeleting(null);
+    const res = await fetch(`/api/users/${deleting.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success(`ลบ ${deleting.name} แล้ว`);
+      setDeleting(null);
+      router.refresh();
+    } else {
+      toast.error("ลบไม่สำเร็จ");
+    }
   }
 
   const columns: Column<User>[] = [
@@ -79,7 +115,7 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
       header: "จัดการ",
       render: (u) => (
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => setEditing(u)}>
+          <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => openEdit(u)}>
             <Pencil className="size-4" />
           </Button>
           <Button size="icon" variant="ghost" aria-label="ลบ" onClick={() => setDeleting(u)}>
@@ -93,12 +129,12 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setEditing(emptyDraft())}>
+        <Button onClick={openAdd}>
           <Plus className="size-4" /> เพิ่มผู้ใช้
         </Button>
       </div>
 
-      <ResponsiveTable columns={columns} data={users} getRowKey={(u) => u.id} />
+      <ResponsiveTable columns={columns} data={initialUsers} getRowKey={(u) => u.id} />
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
@@ -159,19 +195,21 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
                   id="pin"
                   inputMode="numeric"
                   maxLength={6}
-                  placeholder="••••••"
+                  placeholder={editing.id ? "เว้นว่าง = ไม่เปลี่ยน" : "••••••"}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   className="font-mono tracking-[0.4em]"
                 />
-                <p className="text-xs text-muted-foreground">
-                  สำหรับ Manager / Admin ใช้ PIN เข้าสู่ระบบ
-                </p>
+                <p className="text-xs text-muted-foreground">สำหรับ Manager / Admin ใช้ PIN เข้าสู่ระบบ</p>
               </div>
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setEditing(null)}>
                   ยกเลิก
                 </Button>
-                <Button type="submit">บันทึก</Button>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "กำลังบันทึก…" : "บันทึก"}
+                </Button>
               </DialogFooter>
             </form>
           )}
