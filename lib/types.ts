@@ -46,6 +46,8 @@ export type KnowledgeDoc = {
 
 export type Ticket = {
   id: string;
+  /** display code e.g. TA00001 (from DB seq) */
+  code?: string;
   group: string;
   admin: string;
   adminOnline: boolean;

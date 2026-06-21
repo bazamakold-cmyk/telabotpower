@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { mockTickets } from "@/lib/mock/tickets";
+import { formatTicketCode } from "@/lib/ticket-code";
 import type { Ticket } from "@/lib/types";
 import { delay, USE_MOCK } from "@/lib/use-mock";
 
@@ -14,6 +15,7 @@ export async function getTickets(): Promise<Ticket[]> {
   });
   return rows.map((t) => ({
     id: t.id,
+    code: formatTicketCode(t.seq),
     group: t.group?.name ?? "—",
     admin: t.admin?.name ?? "—",
     adminOnline: false,

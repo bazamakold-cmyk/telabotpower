@@ -130,7 +130,7 @@ export function TicketsTable({
   );
 
   const columns: Column<Ticket>[] = [
-    { key: "id", header: "ID งาน", className: "font-mono" },
+    { key: "id", header: "ID งาน", className: "font-mono", render: (r) => r.code ?? r.id },
     { key: "group", header: "กลุ่ม" },
     {
       key: "admin",

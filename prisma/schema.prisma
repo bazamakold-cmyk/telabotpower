@@ -126,6 +126,7 @@ model KnowledgeDoc {
 
 model Ticket {
   id          String         @id @default(cuid())
+  seq         Int            @unique @default(autoincrement())
   groupId     String?
   group       TelegramGroup? @relation(fields: [groupId], references: [id])
   adminId     String?
