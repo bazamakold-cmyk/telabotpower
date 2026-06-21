@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/session";
 import { groupCreateSchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const actor = await requireRole(["SUPER_ADMIN", "MANAGER"]);
+  if (!actor) return NextResponse.json({ error: "ไม่มีสิทธิ์" }, { status: 403 });
+
   const body = await req.json().catch(() => null);
   const parsed = groupCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-  }
+  if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   const d = parsed.data;
   try {
     const group = await db.telegramGroup.create({

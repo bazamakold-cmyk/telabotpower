@@ -1,11 +1,15 @@
 "use client";
 
-import { FileText, FolderPlus, HelpCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { FileText, FolderPlus, HelpCircle, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
-import { useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { deleteCollection } from "@/lib/actions/knowledge";
+import {
+  createCollection,
+  createFaq,
+  deleteCollection,
+  deleteDoc,
+} from "@/lib/actions/knowledge";
 import { FileDropzone } from "@/components/file-dropzone";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -46,109 +50,89 @@ export function KnowledgeManager({
   collections: KnowledgeCollection[];
   initialDocs: KnowledgeDoc[];
 }) {
-  const [cols, setCols] = useState(collections);
+  const router = useRouter();
   const [selected, setSelected] = useState(collections[0]?.id ?? "");
-  const [docs, setDocs] = useState(initialDocs);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [newCol, setNewCol] = useState<{ name: string; description: string } | null>(null);
   const [confirmDel, setConfirmDel] = useState<KnowledgeCollection | null>(null);
-  const [deleting, startDelete] = useTransition();
-  const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
-  const visible = docs.filter((d) => d.collectionId === selected);
+  const visible = initialDocs.filter((d) => d.collectionId === selected);
   const delDocCount = confirmDel
-    ? docs.filter((d) => d.collectionId === confirmDel.id).length
+    ? initialDocs.filter((d) => d.collectionId === confirmDel.id).length
     : 0;
 
   function addCollection() {
     if (!newCol || !newCol.name.trim()) return;
-    const id = `c-${Math.round(performance.now())}`;
-    setCols((p) => [
-      ...p,
-      { id, name: newCol.name.trim(), description: newCol.description.trim() || undefined },
-    ]);
-    setSelected(id);
-    setNewCol(null);
-    toast.success("เพิ่มหมวดหมู่แล้ว (จำลอง)");
+    startTransition(async () => {
+      const res = await createCollection(newCol.name, newCol.description);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      if (res.id) setSelected(res.id);
+      setNewCol(null);
+      toast.success("เพิ่มหมวดหมู่แล้ว");
+      router.refresh();
+    });
   }
 
-  function removeColLocal(target: KnowledgeCollection, docCount: number) {
-    const next = cols.filter((c) => c.id !== target.id);
-    setCols(next);
-    setDocs((prev) => prev.filter((d) => d.collectionId !== target.id));
-    if (selected === target.id) setSelected(next[0]?.id ?? "");
-    setConfirmDel(null);
-    const tail = docCount > 0 ? ` และเอกสาร ${docCount} รายการ` : "";
-    toast.success(`ลบหมวดหมู่ “${target.name}”${tail} แล้ว`);
+  function submitFaq(e: FormEvent) {
+    e.preventDefault();
+    if (!selected || !question.trim() || !answer.trim()) return;
+    startTransition(async () => {
+      const res = await createFaq(selected, question, answer);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setQuestion("");
+      setAnswer("");
+      toast.success("เพิ่ม FAQ แล้ว");
+      router.refresh();
+    });
+  }
+
+  function removeDoc(id: string) {
+    startTransition(async () => {
+      const res = await deleteDoc(id);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("ลบแล้ว");
+      router.refresh();
+    });
   }
 
   function confirmDelete() {
     const target = confirmDel;
     if (!target) return;
-    // Categories added locally (still mock) aren't in the DB yet — drop them
-    // from the UI without hitting the server.
-    if (target.id.startsWith("c-")) {
-      removeColLocal(target, delDocCount);
-      return;
-    }
-    startDelete(async () => {
+    startTransition(async () => {
       const res = await deleteCollection(target.id);
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      removeColLocal(target, res.deletedDocs);
+      if (selected === target.id) {
+        setSelected(collections.find((c) => c.id !== target.id)?.id ?? "");
+      }
+      setConfirmDel(null);
+      const tail = res.deletedDocs > 0 ? ` และเอกสาร ${res.deletedDocs} รายการ` : "";
+      toast.success(`ลบหมวดหมู่ “${target.name}”${tail} แล้ว`);
       router.refresh();
     });
   }
 
-  function addFiles(files: File[]) {
-    const added: KnowledgeDoc[] = files.map((f, i) => ({
-      id: `doc-${i}-${Math.round(performance.now())}`,
-      collectionId: selected,
-      type: "FILE",
-      title: f.name,
-      status: "PENDING",
-    }));
-    setDocs((p) => [...added, ...p]);
-    toast.success(`อัปโหลด ${files.length} ไฟล์ (จำลอง) — เข้าคิวประมวลผล`);
-  }
-
-  function addFaq(e: FormEvent) {
-    e.preventDefault();
-    if (!question.trim() || !answer.trim()) return;
-    setDocs((p) => [
-      {
-        id: `faq-${Math.round(performance.now())}`,
-        collectionId: selected,
-        type: "FAQ",
-        title: question.trim(),
-        question: question.trim(),
-        answer: answer.trim(),
-        status: "READY",
-      },
-      ...p,
-    ]);
-    setQuestion("");
-    setAnswer("");
-    toast.success("เพิ่ม FAQ แล้ว (จำลอง)");
-  }
-
-  function removeDoc(id: string) {
-    setDocs((p) => p.filter((d) => d.id !== id));
-    toast.success("ลบแล้ว (จำลอง)");
-  }
-
-  function retry(id: string) {
-    setDocs((p) => p.map((d) => (d.id === id ? { ...d, status: "PROCESSING" } : d)));
-    toast.message("กำลังลองประมวลผลใหม่ (จำลอง)");
+  function uploadFiles(files: File[]) {
+    toast.message(`เลือก ${files.length} ไฟล์ — การอัปโหลดไฟล์จะเปิดใช้ใน Phase 6 (Vercel Blob)`);
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        {cols.map((c) => (
+        {collections.map((c) => (
           <div key={c.id} className="inline-flex items-center gap-0.5">
             <Button
               size="sm"
@@ -158,10 +142,10 @@ export function KnowledgeManager({
               {c.name}
             </Button>
             <Button
-              size="icon-sm"
+              size="icon"
               variant="ghost"
               aria-label={`ลบหมวดหมู่ ${c.name}`}
-              className="text-muted-foreground hover:text-destructive"
+              className="size-7 text-muted-foreground hover:text-destructive"
               onClick={() => setConfirmDel(c)}
             >
               <X className="size-3.5" />
@@ -174,8 +158,8 @@ export function KnowledgeManager({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <FileDropzone onFiles={addFiles} />
-        <form onSubmit={addFaq} className="glass space-y-3 rounded-xl p-4">
+        <FileDropzone onFiles={uploadFiles} />
+        <form onSubmit={submitFaq} className="glass space-y-3 rounded-xl p-4">
           <h3 className="font-display font-semibold">เพิ่ม FAQ ด้วยมือ</h3>
           <div className="space-y-1.5">
             <Label htmlFor="q">คำถาม</Label>
@@ -196,7 +180,7 @@ export function KnowledgeManager({
               placeholder="คำตอบสำหรับ AI ใช้อ้างอิง"
             />
           </div>
-          <Button type="submit">
+          <Button type="submit" disabled={pending || !selected}>
             <Plus className="size-4" /> เพิ่ม FAQ
           </Button>
         </form>
@@ -220,20 +204,11 @@ export function KnowledgeManager({
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <IngestBadge status={d.status} />
-                  {d.status === "FAILED" && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="ลองใหม่"
-                      onClick={() => retry(d.id)}
-                    >
-                      <RefreshCw className="size-4" />
-                    </Button>
-                  )}
                   <Button
                     size="icon"
                     variant="ghost"
                     aria-label="ลบ"
+                    disabled={pending}
                     onClick={() => removeDoc(d.id)}
                   >
                     <Trash2 className="size-4 text-danger" />
@@ -277,16 +252,16 @@ export function KnowledgeManager({
                   id="col-desc"
                   rows={2}
                   value={newCol.description}
-                  onChange={(e) =>
-                    setNewCol((c) => (c ? { ...c, description: e.target.value } : c))
-                  }
+                  onChange={(e) => setNewCol((c) => (c ? { ...c, description: e.target.value } : c))}
                 />
               </div>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setNewCol(null)}>
                   ยกเลิก
                 </Button>
-                <Button type="submit">บันทึก</Button>
+                <Button type="submit" disabled={pending}>
+                  {pending ? "กำลังบันทึก…" : "บันทึก"}
+                </Button>
               </DialogFooter>
             </form>
           )}
@@ -296,7 +271,7 @@ export function KnowledgeManager({
       <Dialog
         open={confirmDel !== null}
         onOpenChange={(o) => {
-          if (!o && !deleting) setConfirmDel(null);
+          if (!o && !pending) setConfirmDel(null);
         }}
       >
         <DialogContent>
@@ -304,23 +279,15 @@ export function KnowledgeManager({
             <DialogTitle>ลบหมวดหมู่นี้?</DialogTitle>
             <DialogDescription>
               ลบ “{confirmDel?.name}” อย่างถาวร
-              {delDocCount > 0
-                ? ` พร้อมเอกสารทั้งหมด ${delDocCount} รายการในหมวดนี้`
-                : ""}{" "}
-              — กู้คืนไม่ได้
+              {delDocCount > 0 ? ` พร้อมเอกสารทั้งหมด ${delDocCount} รายการในหมวดนี้` : ""} — กู้คืนไม่ได้
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={deleting}
-              onClick={() => setConfirmDel(null)}
-            >
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => setConfirmDel(null)}>
               ยกเลิก
             </Button>
-            <Button type="button" variant="destructive" disabled={deleting} onClick={confirmDelete}>
-              {deleting ? "กำลังลบ…" : "ลบถาวร"}
+            <Button type="button" variant="destructive" disabled={pending} onClick={confirmDelete}>
+              {pending ? "กำลังลบ…" : "ลบถาวร"}
             </Button>
           </DialogFooter>
         </DialogContent>

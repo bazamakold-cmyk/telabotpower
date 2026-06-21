@@ -25,6 +25,7 @@ export async function POST(req: Request) {
   }
 
   const sid = randomUUID();
+  await db.session.deleteMany({ where: { userId: u.id } }); // single active session
   await db.session.create({
     data: { id: sid, userId: u.id, expiresAt: new Date(Date.now() + MAX_AGE * 1000) },
   });

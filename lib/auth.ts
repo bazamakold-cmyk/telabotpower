@@ -1,7 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secretKey = () =>
-  new TextEncoder().encode(process.env.JWT_SECRET ?? "dev-secret-change-me-in-production");
+const secretKey = () => {
+  const s = process.env.JWT_SECRET;
+  if (!s) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("JWT_SECRET is required in production");
+    }
+    return new TextEncoder().encode("dev-secret-change-me-in-production");
+  }
+  return new TextEncoder().encode(s);
+};
 
 export const SESSION_COOKIE = "tbp_session";
 
