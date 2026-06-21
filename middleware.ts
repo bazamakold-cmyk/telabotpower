@@ -4,8 +4,12 @@ import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public routes (login pages + auth API)
-  if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
+  // Public routes (login pages + auth API + Telegram webhook [auth'd by secret token])
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/telegram/webhook")
+  ) {
     return NextResponse.next();
   }
 

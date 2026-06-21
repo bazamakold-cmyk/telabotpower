@@ -4,6 +4,7 @@ import { Pencil, Plus, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { pingGroup } from "@/lib/actions/telegram";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,9 +78,10 @@ export function GroupsManager({
 
   async function ping(g: TelegramGroup) {
     setPinging(g.id);
-    await new Promise((r) => setTimeout(r, 700));
+    const r = await pingGroup(g.chatId);
     setPinging(null);
-    toast.success(`ส่งข้อความทดสอบเข้า “${g.name}” สำเร็จ (จำลอง)`);
+    if (r.ok) toast.success(`ส่งข้อความทดสอบเข้า “${g.name}” สำเร็จ`);
+    else toast.error(r.error);
   }
 
   async function save() {
