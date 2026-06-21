@@ -1,7 +1,8 @@
 // Telabotpower — Prisma schema
 // ⚠️ DB safety: change schema with `npm run db:migrate` (create-only) → review SQL → `npm run db:deploy`.
 //    NEVER use `prisma db push` or `prisma migrate reset`.
-// Note: KnowledgeChunk + pgvector (RAG) is added later in Phase 6.
+// Phase 6: KnowledgeChunk uses pgvector (`vector(1024)`, voyage-3). The embedding
+//   column is `Unsupported` — read/write it via raw SQL ($queryRaw with `<=>`), see lib/ai.ts.
 
 generator client {
   provider = "prisma-client-js"
@@ -122,6 +123,22 @@ model KnowledgeDoc {
   answer       String?
   status       IngestStatus        @default(PENDING)
   createdAt    DateTime            @default(now())
+  chunks       KnowledgeChunk[]
+}
+
+model KnowledgeChunk {
+  id           String       @id @default(cuid())
+  docId        String
+  doc          KnowledgeDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+  collectionId String // denormalized — lets similarity search filter by collection
+  content      String
+  // pgvector embedding (voyage-3 = 1024 dims). Unsupported in Prisma Client —
+  // insert & query via raw SQL (see lib/ai.ts). Changing embedModel dims => new migration.
+  embedding    Unsupported("vector(1024)")
+  createdAt    DateTime     @default(now())
+
+  @@index([collectionId])
+  @@index([docId])
 }
 
 model Ticket {
@@ -157,7 +174,7 @@ model AiSetting {
   systemPrompt           String?
   autoReplyMinConfidence Float    @default(0.7)
   ragTopK                Int      @default(5)
-  ragMinScore            Float    @default(0.75)
+  ragMinScore            Float    @default(0.4) // voyage-3 cosine: relevant ~0.4-0.6, noise ~0.1
   scoringEnabled         Boolean  @default(true)
   scoringRubric          String?
   updatedAt              DateTime @updatedAt

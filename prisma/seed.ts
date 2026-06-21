@@ -38,11 +38,13 @@ async function main() {
     data: { name: "คู่มือการใช้งาน & FAQ", description: "วิธีใช้งานและคำถามพบบ่อย" },
   });
 
+  // FAQs start PENDING (not yet embedded). After API keys are set, index them from
+  // the Knowledge page ("สร้างดัชนี (RAG)") to move them to READY.
   await db.knowledgeDoc.createMany({
     data: [
-      { collectionId: c1.id, type: "FAQ", title: "ค่าจัดส่งเท่าไหร่?", question: "ค่าจัดส่งเท่าไหร่?", answer: "เริ่มต้น 40 บาท ส่งฟรีเมื่อซื้อครบ 1,000 บาท", status: "READY" },
-      { collectionId: c2.id, type: "FAQ", title: "รีเซ็ตรหัสผ่านอย่างไร?", question: "รีเซ็ตรหัสผ่านอย่างไร?", answer: "ไปที่ ตั้งค่า > ความปลอดภัย > รีเซ็ตรหัสผ่าน", status: "READY" },
-      { collectionId: c2.id, type: "FILE", title: "คู่มือติดตั้ง.pdf", status: "PROCESSING" },
+      { collectionId: c1.id, type: "FAQ", title: "ค่าจัดส่งเท่าไหร่?", question: "ค่าจัดส่งเท่าไหร่?", answer: "เริ่มต้น 40 บาท ส่งฟรีเมื่อซื้อครบ 1,000 บาท", status: "PENDING" },
+      { collectionId: c2.id, type: "FAQ", title: "รีเซ็ตรหัสผ่านอย่างไร?", question: "รีเซ็ตรหัสผ่านอย่างไร?", answer: "ไปที่ ตั้งค่า > ความปลอดภัย > รีเซ็ตรหัสผ่าน", status: "PENDING" },
+      { collectionId: c2.id, type: "FILE", title: "คู่มือติดตั้ง.pdf", status: "PENDING" },
     ],
   });
 
