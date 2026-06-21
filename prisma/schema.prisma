@@ -174,7 +174,7 @@ model AiSetting {
   systemPrompt           String?
   autoReplyMinConfidence Float    @default(0.7)
   ragTopK                Int      @default(5)
-  ragMinScore            Float    @default(0.75)
+  ragMinScore            Float    @default(0.4) // voyage-3 cosine: relevant ~0.4-0.6, noise ~0.1
   scoringEnabled         Boolean  @default(true)
   scoringRubric          String?
   updatedAt              DateTime @updatedAt
