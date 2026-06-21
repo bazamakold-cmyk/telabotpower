@@ -1,0 +1,185 @@
+// Telabotpower — Prisma schema
+// ⚠️ DB safety: change schema with `npm run db:migrate` (create-only) → review SQL → `npm run db:deploy`.
+//    NEVER use `prisma db push` or `prisma migrate reset`.
+// Note: KnowledgeChunk + pgvector (RAG) is added later in Phase 6.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  MANAGER
+  ADMIN
+}
+
+enum BotMode {
+  AUTO_REPLY
+  DRAFT
+  OFF
+}
+
+enum DocType {
+  FILE
+  FAQ
+}
+
+enum IngestStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum Urgency {
+  HIGH
+  MEDIUM
+  NORMAL
+}
+
+enum TicketStatus {
+  RECEIVED
+  WORKING
+  DONE
+}
+
+enum MsgRole {
+  CUSTOMER
+  ADMIN
+  BOT
+}
+
+enum DraftStatus {
+  PENDING
+  SENT
+  EDITED
+  SKIPPED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  role         Role
+  username     String?  @unique
+  passwordHash String?
+  pinHash      String?
+  telegramId   String?  @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  tickets      Ticket[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  deviceInfo String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String
+  success    Boolean
+  createdAt  DateTime @default(now())
+}
+
+model TelegramGroup {
+  id          String                @id @default(cuid())
+  name        String
+  chatId      String                @unique
+  purpose     String?
+  botMode     BotMode               @default(DRAFT)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  collections KnowledgeCollection[] @relation("GroupCollections")
+  tickets     Ticket[]
+}
+
+model KnowledgeCollection {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime        @default(now())
+  docs        KnowledgeDoc[]
+  groups      TelegramGroup[] @relation("GroupCollections")
+}
+
+model KnowledgeDoc {
+  id           String              @id @default(cuid())
+  collectionId String
+  collection   KnowledgeCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  type         DocType
+  title        String
+  blobUrl      String?
+  question     String?
+  answer       String?
+  status       IngestStatus        @default(PENDING)
+  createdAt    DateTime            @default(now())
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  groupId     String?
+  group       TelegramGroup? @relation(fields: [groupId], references: [id])
+  adminId     String?
+  admin       User?          @relation(fields: [adminId], references: [id])
+  tag         String
+  detail      String?
+  urgency     Urgency        @default(NORMAL)
+  status      TicketStatus   @default(RECEIVED)
+  respondedAt DateTime?
+  createdAt   DateTime       @default(now())
+}
+
+model BotSetting {
+  id             String   @id @default("default")
+  botToken       String?
+  webhookUrl     String?
+  webhookSecret  String?
+  aiAutoReply    Boolean  @default(true)
+  defaultGroupId String?
+  updatedAt      DateTime @updatedAt
+}
+
+model AiSetting {
+  id                     String   @id @default("default")
+  provider               String   @default("anthropic")
+  chatModel              String   @default("claude-sonnet-4-6")
+  embedModel             String   @default("voyage-3")
+  systemPrompt           String?
+  autoReplyMinConfidence Float    @default(0.7)
+  ragTopK                Int      @default(5)
+  ragMinScore            Float    @default(0.75)
+  scoringEnabled         Boolean  @default(true)
+  scoringRubric          String?
+  updatedAt              DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  tgUserId  String
+  adminId   String?
+  role      MsgRole
+  text      String
+  replyToTg String?
+  sentAt    DateTime
+  createdAt DateTime @default(now())
+}
+
+model AiDraft {
+  id        String      @id @default(cuid())
+  groupId   String
+  sourceMsg String
+  draftText String
+  status    DraftStatus @default(PENDING)
+  adminId   String?
+  createdAt DateTime    @default(now())
+}
