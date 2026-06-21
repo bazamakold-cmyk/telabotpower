@@ -3,6 +3,7 @@
 import { Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/logout-button";
 import { primaryNav, secondaryNav, type NavItem } from "@/components/nav-config";
 import { SimulateConcurrent } from "@/components/simulate-concurrent";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -59,9 +60,11 @@ function Brand() {
 export function AppShell({
   children,
   ticketBadge,
+  userName,
 }: {
   children: React.ReactNode;
   ticketBadge?: number;
+  userName?: string;
 }) {
   const pathname = usePathname();
 
@@ -86,6 +89,15 @@ export function AppShell({
             <SidebarLink key={item.href} item={item} active={matchActive(pathname, item.href)} />
           ))}
         </nav>
+        {userName && (
+          <div className="mt-3 flex items-center gap-2 border-t pt-3">
+            <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+              {userName.slice(0, 1)}
+            </span>
+            <span className="flex-1 truncate text-sm text-muted-foreground">{userName}</span>
+            <LogoutButton />
+          </div>
+        )}
       </aside>
 
       <div className="lg:pl-64">
@@ -118,6 +130,9 @@ export function AppShell({
             </div>
             <SimulateConcurrent />
             <ThemeToggle />
+            <span className="lg:hidden">
+              <LogoutButton />
+            </span>
           </div>
         </header>
 

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CORRECT = "123456";
 const MAX_ATTEMPTS = 3;
 
 function KeypadButton({ children, ...rest }: ComponentProps<"button">) {
@@ -27,10 +26,16 @@ export function PinKeypad({ onLock }: { onLock: () => void }) {
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
 
-  function submit(value: string) {
-    if (value === CORRECT) {
+  async function submit(value: string) {
+    const res = await fetch("/api/auth/pin", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pin: value }),
+    });
+    if (res.ok) {
       toast.success("เข้าสู่ระบบสำเร็จ");
       router.push("/");
+      router.refresh();
       return;
     }
     const next = attempts + 1;

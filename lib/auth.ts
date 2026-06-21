@@ -1,24 +1,17 @@
-import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 
 const secretKey = () =>
   new TextEncoder().encode(process.env.JWT_SECRET ?? "dev-secret-change-me-in-production");
 
+export const SESSION_COOKIE = "tbp_session";
+
 export type SessionPayload = {
   /** user id */
   sub: string;
   role: "SUPER_ADMIN" | "MANAGER" | "ADMIN";
-  /** active session id (for single-session enforcement) */
+  /** active session id (for single-session enforcement, Phase 7) */
   sid: string;
 };
-
-export async function hashSecret(plain: string): Promise<string> {
-  return bcrypt.hash(plain, 10);
-}
-
-export async function verifySecret(plain: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(plain, hash);
-}
 
 export async function signSession(
   payload: SessionPayload,
@@ -43,5 +36,3 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
     return null;
   }
 }
-
-export const SESSION_COOKIE = "tbp_session";
