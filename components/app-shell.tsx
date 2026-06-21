@@ -96,6 +96,26 @@ export function AppShell({
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 lg:hidden">
+              {secondaryNav.map((item) => {
+                const Icon = item.icon;
+                const active = matchActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-label={item.label}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "rounded-lg p-2",
+                      active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="size-5" />
+                  </Link>
+                );
+              })}
+            </div>
             <SimulateConcurrent />
             <ThemeToggle />
           </div>

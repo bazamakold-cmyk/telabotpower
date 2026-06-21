@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   MessagesSquare,
   Settings,
+  Sparkles,
   Ticket,
   Users,
   type LucideIcon,
@@ -19,5 +20,6 @@ export const primaryNav: NavItem[] = [
 ];
 
 export const secondaryNav: NavItem[] = [
+  { href: "/assistant", label: "ผู้ช่วย AI", icon: Sparkles },
   { href: "/settings", label: "ตั้งค่า Bot & AI", icon: Settings },
 ];
