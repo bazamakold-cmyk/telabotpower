@@ -1,10 +1,17 @@
+import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+
+const SESSION_COOKIE = "tbp_session";
+
+function secretKey() {
+  const s = process.env.JWT_SECRET;
+  return new TextEncoder().encode(s ?? "dev-secret-change-me-in-production");
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public routes (login pages + auth API + Telegram webhook [auth'd by secret token])
+  // Public routes (login pages + auth API + Telegram webhook)
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
@@ -14,10 +21,18 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const session = token ? await verifySession(token) : null;
-  if (session) return NextResponse.next();
+  let valid = false;
+  if (token) {
+    try {
+      await jwtVerify(token, secretKey());
+      valid = true;
+    } catch {
+      valid = false;
+    }
+  }
 
-  // Unauthenticated
+  if (valid) return NextResponse.next();
+
   if (pathname.startsWith("/api")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
