@@ -1,5 +1,6 @@
 "use server";
 
+import { put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { indexDoc } from "@/lib/ingest";
@@ -64,6 +65,50 @@ export async function deleteDoc(id: string): Promise<Result> {
   }
   revalidatePath("/knowledge");
   return { ok: true };
+}
+
+const ALLOWED_EXT = [".txt", ".md"];
+
+export async function uploadFile(formData: FormData): Promise<Result> {
+  if (!(await canManage())) return { ok: false, error: "ไม่มีสิทธิ์" };
+
+  const file = formData.get("file") as File | null;
+  const collectionId = formData.get("collectionId") as string | null;
+  if (!file || !collectionId) return { ok: false, error: "ข้อมูลไม่ครบ" };
+
+  const lower = file.name.toLowerCase();
+  if (!ALLOWED_EXT.some((ext) => lower.endsWith(ext))) {
+    return { ok: false, error: "รองรับเฉพาะไฟล์ .txt และ .md" };
+  }
+
+  const text = await file.text();
+  if (!text.trim()) return { ok: false, error: `ไฟล์ "${file.name}" ว่างเปล่า` };
+
+  if (USE_MOCK) return { ok: true };
+
+  try {
+    const blob = await put(`knowledge/${collectionId}/${file.name}`, file, {
+      access: "private",
+      addRandomSuffix: true,
+    });
+
+    const doc = await db.knowledgeDoc.create({
+      data: {
+        collectionId,
+        type: "FILE",
+        title: file.name,
+        blobUrl: blob.url,
+        answer: text,
+        status: "PENDING",
+      },
+    });
+
+    await indexDoc(doc.id);
+    revalidatePath("/knowledge");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ" };
+  }
 }
 
 /**

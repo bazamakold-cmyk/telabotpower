@@ -10,6 +10,7 @@ import {
   createFaq,
   deleteCollection,
   deleteDoc,
+  uploadFile,
 } from "@/lib/actions/knowledge";
 import { FileDropzone } from "@/components/file-dropzone";
 import { EmptyState } from "@/components/states";
@@ -127,7 +128,28 @@ export function KnowledgeManager({
   }
 
   function uploadFiles(files: File[]) {
-    toast.message(`เลือก ${files.length} ไฟล์ — การอัปโหลดไฟล์ (Vercel Blob) จะเปิดใช้ในเฟสถัดไป`);
+    if (!selected) {
+      toast.error("กรุณาเลือกหมวดหมู่ก่อนอัปโหลด");
+      return;
+    }
+    startTransition(async () => {
+      let uploaded = 0;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("collectionId", selected);
+        const res = await uploadFile(fd);
+        if (res.ok) {
+          uploaded++;
+        } else {
+          toast.error(`${file.name}: ${res.error}`);
+        }
+      }
+      if (uploaded > 0) {
+        toast.success(`อัปโหลด ${uploaded} ไฟล์เรียบร้อย — กำลังสร้างดัชนี RAG`);
+        router.refresh();
+      }
+    });
   }
 
   function reindex() {
@@ -185,7 +207,7 @@ export function KnowledgeManager({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <FileDropzone onFiles={uploadFiles} />
+        <FileDropzone onFiles={uploadFiles} disabled={pending} />
         <form onSubmit={submitFaq} className="glass space-y-3 rounded-xl p-4">
           <h3 className="font-display font-semibold">เพิ่ม FAQ ด้วยมือ</h3>
           <div className="space-y-1.5">

@@ -123,7 +123,9 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
         <span className="text-sm text-muted-foreground">เลือกคลังความรู้ก่อนถาม:</span>
         <Select value={kb} onValueChange={(v) => setKb(v ?? "")}>
           <SelectTrigger className="w-full sm:w-72">
-            <SelectValue placeholder="— เลือกคลังความรู้ —" />
+            <SelectValue placeholder="— เลือกคลังความรู้ —">
+              {kbName || undefined}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {collections.map((c) => (
