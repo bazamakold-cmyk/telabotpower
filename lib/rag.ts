@@ -21,6 +21,7 @@ export async function ragAnswer(opts: {
   question: string;
   extraSystem?: string; // group purpose / persona to prepend to the system prompt
   settings?: AiSettings;
+  maxTokens?: number;
 }): Promise<RagResult> {
   const settings = opts.settings ?? (await getAiSettings());
   const empty: RagResult = { answer: "", sources: [], confidence: 0, rowsFound: 0, hadContext: false };
@@ -54,7 +55,7 @@ export async function ragAnswer(opts: {
     "กรุณาตอบโดยอ้างอิงจากเอกสารอ้างอิงข้างต้นเท่านั้น",
   ].join("\n");
 
-  const answer = await generateAnswer({ system, prompt, model: settings.chatModel });
+  const answer = await generateAnswer({ system, prompt, model: settings.chatModel, maxTokens: opts.maxTokens });
   return {
     answer,
     sources: relevant,

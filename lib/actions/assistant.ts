@@ -10,9 +10,11 @@ export type AskResult =
   | { ok: true; answer: string; sources: AskSource[]; confidence: number }
   | { ok: false; error: string };
 
-/**
- * AI Assistant page: answer a question grounded in ONE chosen knowledge collection.
- */
+const CONFIDENCE_THRESHOLD = 0.8;
+
+const BREVITY_INSTRUCTION =
+  "\n\nกรุณาตอบสั้น กระชับ ตรงประเด็น ไม่เกิน 5 ประโยค ห้ามใส่ข้อมูลที่ไม่เกี่ยวข้อง";
+
 export async function askAssistant(collectionId: string, question: string): Promise<AskResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
@@ -21,22 +23,43 @@ export async function askAssistant(collectionId: string, question: string): Prom
   if (!collectionId) return { ok: false, error: "กรุณาเลือกคลังความรู้ก่อน" };
   if (!q) return { ok: false, error: "กรุณาพิมพ์คำถาม" };
   if (USE_MOCK) {
-    return { ok: true, answer: "(โหมดจำลอง) ต่อ API key จริงเพื่อให้ AI ตอบจากคลังความรู้", sources: [], confidence: 0 };
+    return {
+      ok: true,
+      answer: "(โหมดจำลอง) ต่อ API key จริงเพื่อให้ AI ตอบจากคลังความรู้",
+      sources: [],
+      confidence: 0,
+    };
   }
 
   try {
-    const r = await ragAnswer({ collectionIds: [collectionId], question: q });
+    const r = await ragAnswer({
+      collectionIds: [collectionId],
+      question: q,
+      extraSystem: BREVITY_INSTRUCTION,
+      maxTokens: 400,
+    });
+
     if (!r.hadContext) {
       return {
         ok: true,
         answer:
           r.rowsFound === 0
-            ? "ยังไม่พบข้อมูลในคลังนี้ — อาจยังไม่ได้สร้างดัชนี (ไปที่หน้า “คลังความรู้” แล้วกด “สร้างดัชนี (RAG)”)"
-            : "ขออภัย ไม่พบข้อมูลที่เกี่ยวข้องกับคำถามนี้ในคลังความรู้ครับ",
+            ? 'ยังไม่พบข้อมูลในคลังนี้ — อาจยังไม่ได้สร้างดัชนี (ไปที่หน้า "คลังความรู้" แล้วกด "สร้างดัชนี (RAG)")'
+            : `ไม่พบข้อมูลที่ตรงพอ (ความมั่นใจสูงสุด ${Math.round((r.confidence ?? 0) * 100)}%) — ลองถามด้วยคำที่ตรงกับเอกสารมากขึ้น`,
         sources: [],
         confidence: r.confidence,
       };
     }
+
+    if (r.confidence < CONFIDENCE_THRESHOLD) {
+      return {
+        ok: true,
+        answer: `ความมั่นใจ ${Math.round(r.confidence * 100)}% — ต่ำกว่าเกณฑ์ที่ตั้งไว้ (80%) ไม่สามารถให้คำตอบที่แน่ใจได้ครับ`,
+        sources: [],
+        confidence: r.confidence,
+      };
+    }
+
     return {
       ok: true,
       answer: r.answer || "ขออภัย ไม่สามารถสร้างคำตอบได้ในขณะนี้",

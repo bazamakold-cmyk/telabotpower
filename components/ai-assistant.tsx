@@ -2,6 +2,7 @@
 
 import { Bot, Send, Sparkles, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { askAssistant, type AskSource } from "@/lib/actions/assistant";
 import { Button } from "@/components/ui/button";
@@ -46,30 +47,46 @@ function Bubble({ msg }: { msg: Msg }) {
       <div className="max-w-[80%] space-y-1">
         <div
           className={cn(
-            "whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm",
-            isUser ? "bg-primary text-primary-foreground" : "border border-border bg-card"
+            "rounded-2xl px-3 py-2 text-sm",
+            isUser
+              ? "whitespace-pre-wrap bg-primary text-primary-foreground"
+              : "prose prose-sm dark:prose-invert max-w-none border border-border bg-card"
           )}
         >
-          {msg.text}
+          {isUser ? msg.text : <ReactMarkdown>{msg.text}</ReactMarkdown>}
         </div>
-        {!isUser && msg.sources && msg.sources.length > 0 && (
-          <details className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs">
-            <summary className="cursor-pointer text-muted-foreground">
-              อ้างอิง {msg.sources.length} รายการ
-              {typeof msg.confidence === "number" &&
-                ` · ความมั่นใจ ${Math.round(msg.confidence * 100)}%`}
-            </summary>
-            <ul className="mt-2 space-y-1.5">
-              {msg.sources.map((s, i) => (
-                <li
-                  key={i}
-                  className="whitespace-pre-wrap rounded-lg border border-border bg-background/60 p-2 text-muted-foreground"
-                >
-                  {s.content}
-                </li>
-              ))}
-            </ul>
-          </details>
+        {!isUser && typeof msg.confidence === "number" && msg.confidence > 0 && (
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
+                msg.confidence >= 0.8
+                  ? "border-success/30 bg-success/10 text-success"
+                  : msg.confidence >= 0.5
+                    ? "border-warning/30 bg-warning/10 text-warning"
+                    : "border-danger/30 bg-danger/10 text-danger"
+              )}
+            >
+              ความมั่นใจ {Math.round(msg.confidence * 100)}%
+            </span>
+            {msg.sources && msg.sources.length > 0 && (
+              <details className="flex-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs">
+                <summary className="cursor-pointer text-muted-foreground">
+                  อ้างอิง {msg.sources.length} รายการ
+                </summary>
+                <ul className="mt-2 space-y-1.5">
+                  {msg.sources.map((s, i) => (
+                    <li
+                      key={i}
+                      className="whitespace-pre-wrap rounded-lg border border-border bg-background/60 p-2 text-muted-foreground"
+                    >
+                      {s.content}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
         )}
       </div>
     </div>
