@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Loader, Sparkles } from "lucide-react";
+import { CheckCircle2, Clock, Loader, MessageSquare, Sparkles, ThumbsDown } from "lucide-react";
 import { AdminLivePanel } from "@/components/admin-live-panel";
 import { KpiCard } from "@/components/kpi-card";
 import { OnlineDot } from "@/components/online-dot";
@@ -6,6 +6,7 @@ import { ResponseTrendChart } from "@/components/response-trend-chart";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { StatusTag } from "@/components/status-tag";
 import { UrgencyTag } from "@/components/urgency-tag";
+import { getFeedbackStats } from "@/lib/actions/feedback";
 import { getKpis, getResponseTrend } from "@/lib/services/stats";
 import { getTickets } from "@/lib/services/tickets";
 import { getUsers } from "@/lib/services/users";
@@ -29,12 +30,15 @@ const columns: Column<Ticket>[] = [
 ];
 
 export default async function DashboardPage() {
-  const [kpis, trend, tickets, users] = await Promise.all([
+  const [kpis, trend, tickets, users, feedback] = await Promise.all([
     getKpis(),
     getResponseTrend(),
     getTickets(),
     getUsers(),
+    getFeedbackStats(),
   ]);
+  const thumbsUpPct =
+    feedback.total > 0 ? Math.round((feedback.thumbsUp / feedback.total) * 100) : 0;
   const recent = tickets.slice(0, 5);
   const admins = users.filter((u) => u.role !== "SUPER_ADMIN").slice(0, 3);
 
@@ -54,17 +58,21 @@ export default async function DashboardPage() {
           delta={{ label: "12%", tone: "good", dir: "down" }}
         />
         <KpiCard
-          label="คะแนน AI ประเมินคุณภาพ"
-          value={String(kpis.aiQualityScore)}
-          unit="/10"
-          icon={Sparkles}
-          delta={{ label: "4%", tone: "good", dir: "up" }}
+          label="AI ตอบทั้งหมด"
+          value={String(feedback.total)}
+          unit="ครั้ง"
+          icon={MessageSquare}
         />
         <KpiCard
-          label="งานสะสม (Working)"
-          value={String(kpis.working)}
-          icon={Loader}
-          delta={{ label: "5", tone: "bad", dir: "up" }}
+          label="👍 พอใจ"
+          value={feedback.total > 0 ? `${thumbsUpPct}%` : "—"}
+          unit={feedback.total > 0 ? `(${feedback.thumbsUp}/${feedback.total})` : ""}
+          icon={Sparkles}
+          delta={
+            feedback.total > 0
+              ? { label: `👎 ${feedback.thumbsDown}`, tone: feedback.thumbsDown > 0 ? "bad" : "good", dir: "up" }
+              : undefined
+          }
         />
         <KpiCard
           label="งานสำเร็จ (Done) วันนี้"
@@ -85,6 +93,25 @@ export default async function DashboardPage() {
         <h2 className="font-display text-lg font-semibold">งานล่าสุด</h2>
         <ResponsiveTable columns={columns} data={recent} getRowKey={(r) => r.id} />
       </section>
+
+      {feedback.recent.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <ThumbsDown className="size-4 text-danger" aria-hidden />
+            คำถามที่ AI ตอบไม่ดี — ควรเพิ่มข้อมูลในคลังความรู้
+          </h2>
+          <div className="glass rounded-xl divide-y divide-border">
+            {feedback.recent.map((r) => (
+              <div key={r.id} className="flex flex-col gap-0.5 px-4 py-3 text-sm">
+                <span className="font-medium">{r.question}</span>
+                <span className="text-xs text-muted-foreground">
+                  คลัง: {r.collectionName} · ความมั่นใจ {Math.round(r.confidence * 100)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

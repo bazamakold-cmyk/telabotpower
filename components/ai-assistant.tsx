@@ -1,9 +1,10 @@
 "use client";
 
-import { Bot, Send, Sparkles, User } from "lucide-react";
+import { Bot, Send, Sparkles, ThumbsDown, ThumbsUp, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { logAnswer, rateAnswer } from "@/lib/actions/feedback";
 import { askAssistant, type AskSource } from "@/lib/actions/assistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,8 @@ type Msg = {
   text: string;
   sources?: AskSource[];
   confidence?: number;
+  logId?: string;
+  rated?: 1 | -1;
 };
 
 const SUGGESTIONS = [
@@ -32,7 +35,47 @@ const SUGGESTIONS = [
   "นโยบายการคืนสินค้า",
 ];
 
-function Bubble({ msg }: { msg: Msg }) {
+function FeedbackBar({
+  logId,
+  rated,
+  onRate,
+}: {
+  logId?: string;
+  rated?: 1 | -1;
+  onRate: (r: 1 | -1) => void;
+}) {
+  if (!logId) return null;
+  if (rated) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        {rated === 1 ? "👍 ขอบคุณ!" : "👎 จะนำไปปรับปรุง"}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs text-muted-foreground">คำตอบเป็นยังไงบ้าง?</span>
+      <button
+        type="button"
+        onClick={() => onRate(1)}
+        className="rounded p-1 text-muted-foreground hover:bg-success/10 hover:text-success"
+        aria-label="ดี"
+      >
+        <ThumbsUp className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onRate(-1)}
+        className="rounded p-1 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+        aria-label="ไม่ดี"
+      >
+        <ThumbsDown className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function Bubble({ msg, onRate }: { msg: Msg; onRate: (id: string, r: 1 | -1) => void }) {
   const isUser = msg.role === "user";
   return (
     <div className={cn("flex gap-2", isUser && "flex-row-reverse")}>
@@ -55,22 +98,24 @@ function Bubble({ msg }: { msg: Msg }) {
         >
           {isUser ? msg.text : <ReactMarkdown>{msg.text}</ReactMarkdown>}
         </div>
-        {!isUser && typeof msg.confidence === "number" && msg.confidence > 0 && (
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
-                msg.confidence >= 0.8
-                  ? "border-success/30 bg-success/10 text-success"
-                  : msg.confidence >= 0.5
-                    ? "border-warning/30 bg-warning/10 text-warning"
-                    : "border-danger/30 bg-danger/10 text-danger"
-              )}
-            >
-              ความมั่นใจ {Math.round(msg.confidence * 100)}%
-            </span>
+        {!isUser && (
+          <div className="flex flex-wrap items-center gap-2">
+            {typeof msg.confidence === "number" && msg.confidence > 0 && (
+              <span
+                className={cn(
+                  "inline-flex rounded-full border px-2 py-0.5 text-xs font-medium",
+                  msg.confidence >= 0.8
+                    ? "border-success/30 bg-success/10 text-success"
+                    : msg.confidence >= 0.5
+                      ? "border-warning/30 bg-warning/10 text-warning"
+                      : "border-danger/30 bg-danger/10 text-danger"
+                )}
+              >
+                ความมั่นใจ {Math.round(msg.confidence * 100)}%
+              </span>
+            )}
             {msg.sources && msg.sources.length > 0 && (
-              <details className="flex-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs">
+              <details className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs">
                 <summary className="cursor-pointer text-muted-foreground">
                   อ้างอิง {msg.sources.length} รายการ
                 </summary>
@@ -86,6 +131,11 @@ function Bubble({ msg }: { msg: Msg }) {
                 </ul>
               </details>
             )}
+            <FeedbackBar
+              logId={msg.logId}
+              rated={msg.rated}
+              onRate={(r) => msg.logId && onRate(msg.logId, r)}
+            />
           </div>
         )}
       </div>
@@ -108,6 +158,13 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking]);
 
+  async function handleRate(logId: string, r: 1 | -1) {
+    setMessages((m) =>
+      m.map((msg) => (msg.logId === logId ? { ...msg, rated: r } : msg))
+    );
+    await rateAnswer(logId, r);
+  }
+
   async function ask(q: string) {
     const question = q.trim();
     if (!kb || !question || thinking) return;
@@ -117,16 +174,31 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
     const res = await askAssistant(kb, question);
     setThinking(false);
     if (res.ok) {
-      setMessages((m) => [
-        ...m,
-        {
-          id: newId("a"),
-          role: "ai",
-          text: res.answer,
-          sources: res.sources,
+      const aiMsg: Msg = {
+        id: newId("a"),
+        role: "ai",
+        text: res.answer,
+        sources: res.sources,
+        confidence: res.confidence,
+      };
+      setMessages((m) => [...m, aiMsg]);
+
+      // บันทึก log ใน background แล้วแนบ logId เข้ากับ message
+      if (res.confidence > 0) {
+        logAnswer({
+          collectionId: kb,
+          collectionName: kbName,
+          question,
+          answer: res.answer,
           confidence: res.confidence,
-        },
-      ]);
+        }).then((r) => {
+          if (r.ok) {
+            setMessages((m) =>
+              m.map((msg) => (msg.id === aiMsg.id ? { ...msg, logId: r.logId } : msg))
+            );
+          }
+        });
+      }
     } else {
       toast.error(res.error);
       setMessages((m) => [...m, { id: newId("a"), role: "ai", text: `⚠️ ${res.error}` }]);
@@ -135,7 +207,6 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
 
   return (
     <div className="space-y-4">
-      {/* Knowledge Base picker */}
       <div className="glass flex flex-wrap items-center gap-3 rounded-xl p-3">
         <span className="text-sm text-muted-foreground">เลือกคลังความรู้ก่อนถาม:</span>
         <Select value={kb} onValueChange={(v) => setKb(v ?? "")}>
@@ -165,12 +236,12 @@ export function AiAssistant({ collections }: { collections: KnowledgeCollection[
             </p>
             <p className="max-w-md text-sm text-muted-foreground">
               {kb
-                ? `ผมจะค้นคำตอบจากคลัง “${kbName}” ให้ — พิมพ์คำถาม หรือเลือกตัวอย่างด้านล่าง`
+                ? `ผมจะค้นคำตอบจากคลัง "${kbName}" ให้ — พิมพ์คำถาม หรือเลือกตัวอย่างด้านล่าง`
                 : "เลือกคลังความรู้ที่ต้องการให้ AI ใช้ตอบ แล้วเริ่มถามได้เลย"}
             </p>
           </div>
         ) : (
-          messages.map((m) => <Bubble key={m.id} msg={m} />)
+          messages.map((m) => <Bubble key={m.id} msg={m} onRate={handleRate} />)
         )}
         {thinking && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

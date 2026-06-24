@@ -30,7 +30,13 @@ export async function saveBotToken(token: string) {
 export async function testGetMe() {
   if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
   const r = await getMe();
-  if (!r.ok || !r.result) return { ok: false as const, error: r.description ?? "เชื่อมต่อไม่สำเร็จ" };
+  if (!r.ok || !r.result) {
+    const raw = r.description ?? "เชื่อมต่อไม่สำเร็จ";
+    const msg = raw === "Not Found" || raw === "Unauthorized"
+      ? "Token ไม่ถูกต้อง — กรุณากรอก Bot Token ใหม่แล้วกด 'บันทึก' ก่อนทดสอบ"
+      : raw;
+    return { ok: false as const, error: msg };
+  }
   return { ok: true as const, username: r.result.username ?? null, name: r.result.first_name ?? null };
 }
 

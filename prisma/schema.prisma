@@ -201,3 +201,17 @@ model AiDraft {
   adminId   String?
   createdAt DateTime    @default(now())
 }
+
+model AnswerLog {
+  id             String   @id @default(cuid())
+  collectionId   String
+  collectionName String
+  question       String
+  answer         String
+  confidence     Float
+  rating         Int?     // 1 = 👍  -1 = 👎  null = ยังไม่ rating
+  createdAt      DateTime @default(now())
+
+  @@index([collectionId])
+  @@index([createdAt])
+}

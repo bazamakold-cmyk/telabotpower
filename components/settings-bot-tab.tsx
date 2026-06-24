@@ -125,7 +125,7 @@ export function SettingsBotTab({
         </div>
         <p className="text-xs text-muted-foreground">เก็บแบบเข้ารหัส (AES-256-GCM) ไม่แสดงค่าเต็ม</p>
         <Button variant="outline" disabled={pending} onClick={test}>
-          ทดสอบการเชื่อมต่อ (getMe)
+          ทดสอบเชื่อมต่อ
         </Button>
       </section>
 

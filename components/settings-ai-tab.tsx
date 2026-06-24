@@ -1,8 +1,9 @@
 "use client";
 
-import { KeyRound, Play } from "lucide-react";
-import { useState } from "react";
+import { KeyRound } from "lucide-react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { saveAiSettings } from "@/lib/actions/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
+const MODELS = [
+  { value: "claude-opus-4-8", label: "Claude Opus 4.8 (ฉลาดสุด — ช้ากว่า)" },
+  { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 (แนะนำ — เร็ว/ดี)" },
+  { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5 (เร็วสุด — ถูกสุด)" },
+];
+
 function KeyRow({ name, ok }: { name: string; ok: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -25,60 +32,86 @@ function KeyRow({ name, ok }: { name: string; ok: boolean }) {
   );
 }
 
-export function SettingsAiTab() {
-  const [provider, setProvider] = useState("anthropic");
-  const [model, setModel] = useState("claude-sonnet-4-6");
-  const [persona, setPersona] = useState("ตอบสุภาพ กระชับ ตรงประเด็น เป็นภาษาไทย");
-  const [threshold, setThreshold] = useState("0.7");
-  const [topK, setTopK] = useState("5");
-  const [scoring, setScoring] = useState(true);
-  const [playground, setPlayground] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
+export function SettingsAiTab({
+  initialChatModel = "claude-sonnet-4-6",
+  initialSystemPrompt = "",
+  initialThreshold = 0.7,
+  initialTopK = 5,
+  initialScoring = true,
+}: {
+  initialChatModel?: string;
+  initialSystemPrompt?: string;
+  initialThreshold?: number;
+  initialTopK?: number;
+  initialScoring?: boolean;
+}) {
+  const [model, setModel] = useState(initialChatModel);
+  const [persona, setPersona] = useState(
+    initialSystemPrompt || "ตอบสุภาพ กระชับ ตรงประเด็น เป็นภาษาไทย"
+  );
+  const [threshold, setThreshold] = useState(String(initialThreshold));
+  const [topK, setTopK] = useState(String(initialTopK));
+  const [scoring, setScoring] = useState(initialScoring);
+  const [pending, startTransition] = useTransition();
 
-  async function run() {
-    if (!playground.trim()) return;
-    setRunning(true);
-    setAnswer(null);
-    await new Promise((r) => setTimeout(r, 800));
-    setRunning(false);
-    setAnswer("(คำตอบจำลอง) จากคลังความรู้: ค่าจัดส่งเริ่มต้น 40 บาท ส่งฟรีเมื่อซื้อครบ 1,000 บาท");
+  const modelLabel = MODELS.find((m) => m.value === model)?.label ?? model;
+
+  function save() {
+    const conf = parseFloat(threshold);
+    const k = parseInt(topK, 10);
+    if (isNaN(conf) || conf < 0 || conf > 1) {
+      toast.error("Threshold ต้องเป็นตัวเลข 0–1");
+      return;
+    }
+    if (isNaN(k) || k < 1 || k > 20) {
+      toast.error("RAG top-k ต้องเป็นตัวเลข 1–20");
+      return;
+    }
+    startTransition(async () => {
+      const res = await saveAiSettings({
+        chatModel: model,
+        systemPrompt: persona,
+        autoReplyMinConfidence: conf,
+        ragTopK: k,
+        scoringEnabled: scoring,
+      });
+      if (res.ok) {
+        toast.success("บันทึกการตั้งค่า AI แล้ว");
+      } else {
+        toast.error(res.error);
+      }
+    });
   }
 
   return (
     <div className="space-y-6">
       <section className="glass grid gap-4 rounded-xl p-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="provider">Provider</Label>
-          <Select value={provider} onValueChange={(v) => setProvider(v ?? "anthropic")}>
-            <SelectTrigger id="provider">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
-              <SelectItem value="openai-compatible">OpenAI-compatible (Hermes/Typhoon)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="model">Chat model</Label>
           <Select value={model} onValueChange={(v) => setModel(v ?? model)}>
             <SelectTrigger id="model">
-              <SelectValue />
+              <SelectValue>{modelLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude-opus-4-8">claude-opus-4-8</SelectItem>
-              <SelectItem value="claude-sonnet-4-6">claude-sonnet-4-6</SelectItem>
+              {MODELS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Opus ฉลาดสุดแต่ช้าและแพงกว่า — Sonnet เหมาะสำหรับการใช้งานทั่วไป
+          </p>
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="persona">Persona / System prompt กลาง</Label>
+          <Label htmlFor="persona">System prompt (persona)</Label>
           <Textarea
             id="persona"
-            rows={2}
+            rows={3}
             value={persona}
             onChange={(e) => setPersona(e.target.value)}
+            placeholder="เช่น ตอบสุภาพ กระชับ ตรงประเด็น เป็นภาษาไทย"
           />
         </div>
         <div className="space-y-1.5">
@@ -89,6 +122,9 @@ export function SettingsAiTab() {
             value={threshold}
             onChange={(e) => setThreshold(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            ความมั่นใจขั้นต่ำที่บอทจะส่งคำตอบอัตโนมัติ (ค่าแนะนำ 0.5–0.7)
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="topk">RAG top-k</Label>
@@ -98,6 +134,7 @@ export function SettingsAiTab() {
             value={topK}
             onChange={(e) => setTopK(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">จำนวน chunk ที่ดึงมาให้ AI อ่าน (ค่าแนะนำ 3–5)</p>
         </div>
       </section>
 
@@ -122,25 +159,9 @@ export function SettingsAiTab() {
         </p>
       </section>
 
-      <section className="glass space-y-3 rounded-xl p-4">
-        <h3 className="flex items-center gap-2 font-display font-semibold">
-          <Play className="size-4 text-primary" aria-hidden /> Playground
-        </h3>
-        <Textarea
-          rows={2}
-          value={playground}
-          onChange={(e) => setPlayground(e.target.value)}
-          placeholder="พิมพ์คำถามเพื่อลองให้ AI ตอบจากคลังความรู้"
-        />
-        <Button disabled={running} onClick={run}>
-          {running ? "กำลังคิด…" : "ทดสอบถาม"}
-        </Button>
-        {answer && <div className="rounded-lg border bg-muted/30 p-3 text-sm">{answer}</div>}
-      </section>
-
       <div className="flex justify-end">
-        <Button onClick={() => toast.success("บันทึกการตั้งค่า AI แล้ว (จำลอง)")}>
-          บันทึกการตั้งค่า
+        <Button onClick={save} disabled={pending}>
+          {pending ? "กำลังบันทึก…" : "บันทึกการตั้งค่า"}
         </Button>
       </div>
     </div>

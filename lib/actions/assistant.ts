@@ -10,7 +10,8 @@ export type AskResult =
   | { ok: true; answer: string; sources: AskSource[]; confidence: number }
   | { ok: false; error: string };
 
-const CONFIDENCE_THRESHOLD = 0.8;
+// แสดงผลทุกครั้งที่ hadContext=true, บล็อกเฉพาะ <30% (แทบไม่มีข้อมูลเลย)
+const CONFIDENCE_THRESHOLD = 0.3;
 
 const BREVITY_INSTRUCTION =
   "\n\nกรุณาตอบสั้น กระชับ ตรงประเด็น ไม่เกิน 5 ประโยค ห้ามใส่ข้อมูลที่ไม่เกี่ยวข้อง";
@@ -54,7 +55,7 @@ export async function askAssistant(collectionId: string, question: string): Prom
     if (r.confidence < CONFIDENCE_THRESHOLD) {
       return {
         ok: true,
-        answer: `ความมั่นใจ ${Math.round(r.confidence * 100)}% — ต่ำกว่าเกณฑ์ที่ตั้งไว้ (80%) ไม่สามารถให้คำตอบที่แน่ใจได้ครับ`,
+        answer: `ข้อมูลที่ใกล้เคียงน้อยเกินไป (ความมั่นใจ ${Math.round(r.confidence * 100)}%) — ลองถามด้วยคำอื่น หรือเพิ่มข้อมูลในคลังความรู้`,
         sources: [],
         confidence: r.confidence,
       };

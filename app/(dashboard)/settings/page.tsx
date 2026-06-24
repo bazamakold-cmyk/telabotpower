@@ -11,7 +11,10 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (user?.role !== "SUPER_ADMIN") redirect("/");
 
-  const bot = await db.botSetting.findUnique({ where: { id: "default" } });
+  const [bot, aiSetting] = await Promise.all([
+    db.botSetting.findUnique({ where: { id: "default" } }),
+    db.aiSetting.findUnique({ where: { id: "default" } }),
+  ]);
 
   return (
     <main className="space-y-6">
@@ -29,7 +32,13 @@ export default async function SettingsPage() {
           />
         </TabsContent>
         <TabsContent value="ai" className="mt-4">
-          <SettingsAiTab />
+          <SettingsAiTab
+            initialChatModel={aiSetting?.chatModel ?? "claude-sonnet-4-6"}
+            initialSystemPrompt={aiSetting?.systemPrompt ?? ""}
+            initialThreshold={aiSetting?.autoReplyMinConfidence ?? 0.7}
+            initialTopK={aiSetting?.ragTopK ?? 5}
+            initialScoring={aiSetting?.scoringEnabled ?? true}
+          />
         </TabsContent>
       </Tabs>
     </main>
