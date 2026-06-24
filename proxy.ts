@@ -11,7 +11,6 @@ function secretKey() {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public routes (login pages + auth API + Telegram webhook)
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
