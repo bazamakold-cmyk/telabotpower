@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { LockdownOverlay } from "@/components/lockdown-overlay";
 import { LoginQr } from "@/components/login-qr";
@@ -35,9 +34,6 @@ export default function LoginPage() {
           >
             {mode === "qr" ? "ใช้ PIN แทน" : "ใช้ Telegram QR"}
           </Button>
-          <Link href="/login/super" className="text-muted-foreground hover:text-foreground">
-            เข้าสู่ระบบสำหรับ Super Admin →
-          </Link>
         </div>
       </div>
     </main>
