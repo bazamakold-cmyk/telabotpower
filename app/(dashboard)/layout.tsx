@@ -16,7 +16,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ]);
   const working = tickets.filter((t) => t.status === "WORKING").length;
   return (
-    <AppShell ticketBadge={working} draftBadge={draftCount} userName={user.name}>
+    <AppShell
+      ticketBadge={working}
+      draftBadge={draftCount}
+      userName={user.name}
+      userRole={user.role}
+    >
       {children}
     </AppShell>
   );

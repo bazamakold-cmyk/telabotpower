@@ -1,7 +1,9 @@
 import { UsersManager } from "@/components/users-manager";
 import { getUsers } from "@/lib/services/users";
+import { requireSuperAdmin } from "@/lib/session";
 
 export default async function UsersPage() {
+  await requireSuperAdmin();
   const users = await getUsers();
   return (
     <main className="space-y-6">

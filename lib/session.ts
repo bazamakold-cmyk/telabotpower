@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -29,5 +30,13 @@ export async function requireUser() {
 export async function requireRole(roles: Role[]) {
   const user = await getCurrentUser();
   if (!user || !roles.includes(user.role)) return null;
+  return user;
+}
+
+/** Redirect non-SUPER_ADMIN users to /assistant (their landing page). */
+export async function requireSuperAdmin() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (user.role !== "SUPER_ADMIN") redirect("/assistant");
   return user;
 }

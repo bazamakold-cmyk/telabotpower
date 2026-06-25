@@ -61,13 +61,18 @@ export function AppShell({
   ticketBadge,
   draftBadge,
   userName,
+  userRole,
 }: {
   children: React.ReactNode;
   ticketBadge?: number;
   draftBadge?: number;
   userName?: string;
+  userRole?: string;
 }) {
   const pathname = usePathname();
+  const isSuper = userRole === "SUPER_ADMIN";
+  const visiblePrimary = primaryNav.filter((i) => !i.superOnly || isSuper);
+  const visibleSecondary = secondaryNav.filter((i) => !i.superOnly || isSuper);
 
   return (
     <div className="min-h-dvh">
@@ -77,7 +82,7 @@ export function AppShell({
           <Brand />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
-          {primaryNav.map((item) => (
+          {visiblePrimary.map((item) => (
             <SidebarLink
               key={item.href}
               item={item}
@@ -90,7 +95,7 @@ export function AppShell({
             />
           ))}
           <div className="my-2 border-t" />
-          {secondaryNav.map((item) => (
+          {visibleSecondary.map((item) => (
             <SidebarLink key={item.href} item={item} active={matchActive(pathname, item.href)} />
           ))}
         </nav>
@@ -114,7 +119,7 @@ export function AppShell({
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 lg:hidden">
-              {secondaryNav.map((item) => {
+              {visibleSecondary.map((item) => {
                 const Icon = item.icon;
                 const active = matchActive(pathname, item.href);
                 return (
@@ -144,8 +149,8 @@ export function AppShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {primaryNav.map((item) => {
+      <nav className={cn("glass fixed inset-x-0 bottom-0 z-30 grid border-t pb-[env(safe-area-inset-bottom)] lg:hidden", isSuper ? "grid-cols-6" : "grid-cols-2")}>
+        {visiblePrimary.map((item) => {
           const Icon = item.icon;
           const active = matchActive(pathname, item.href);
           return (

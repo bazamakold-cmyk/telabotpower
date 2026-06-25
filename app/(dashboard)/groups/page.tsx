@@ -1,8 +1,10 @@
 import { GroupsManager } from "@/components/groups-manager";
 import { getGroups } from "@/lib/services/groups";
 import { getCollections } from "@/lib/services/knowledge";
+import { requireSuperAdmin } from "@/lib/session";
 
 export default async function GroupsPage() {
+  await requireSuperAdmin();
   const [groups, collections] = await Promise.all([getGroups(), getCollections()]);
   return (
     <main className="space-y-6">

@@ -1,15 +1,13 @@
-import { redirect } from "next/navigation";
 import { SettingsAiTab } from "@/components/settings-ai-tab";
 import { SettingsBotTab } from "@/components/settings-bot-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { requireSuperAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = await getCurrentUser();
-  if (user?.role !== "SUPER_ADMIN") redirect("/");
+  await requireSuperAdmin();
 
   const [bot, aiSetting] = await Promise.all([
     db.botSetting.findUnique({ where: { id: "default" } }),
