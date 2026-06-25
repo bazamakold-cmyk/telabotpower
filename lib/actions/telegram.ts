@@ -17,7 +17,12 @@ async function mgr() {
 export async function saveBotToken(token: string) {
   if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
   if (!token.trim()) return { ok: false as const, error: "กรุณากรอก token" };
-  const enc = encrypt(token.trim());
+  let enc: string;
+  try {
+    enc = encrypt(token.trim());
+  } catch {
+    return { ok: false as const, error: "ไม่พบ ENCRYPTION_KEY — กรุณาตั้งค่าใน Vercel → Settings → Environment Variables แล้ว Redeploy" };
+  }
   await db.botSetting.upsert({
     where: { id: "default" },
     update: { botToken: enc },
