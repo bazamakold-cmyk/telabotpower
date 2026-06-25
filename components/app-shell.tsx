@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { primaryNav, secondaryNav, type NavItem } from "@/components/nav-config";
-import { SimulateConcurrent } from "@/components/simulate-concurrent";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -134,7 +133,6 @@ export function AppShell({
                 );
               })}
             </div>
-            <SimulateConcurrent />
             <ThemeToggle />
             <span className="lg:hidden">
               <LogoutButton />
@@ -146,7 +144,7 @@ export function AppShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="glass fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t pb-[env(safe-area-inset-bottom)] lg:hidden">
         {primaryNav.map((item) => {
           const Icon = item.icon;
           const active = matchActive(pathname, item.href);
