@@ -60,12 +60,14 @@ export function AppShell({
   children,
   ticketBadge,
   draftBadge,
+  pendingBadge,
   userName,
   userRole,
 }: {
   children: React.ReactNode;
   ticketBadge?: number;
   draftBadge?: number;
+  pendingBadge?: number;
   userName?: string;
   userRole?: string;
 }) {
@@ -92,6 +94,7 @@ export function AppShell({
               badge={
                 item.href === "/tickets" ? ticketBadge
                 : item.href === "/drafts" ? draftBadge
+                : item.href === "/pending" ? pendingBadge
                 : undefined
               }
             />

@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   BookOpen,
   ClipboardList,
   History,
@@ -19,6 +20,7 @@ export const primaryNav: NavItem[] = [
   { href: "/groups", label: "ลงทะเบียนกลุ่ม", icon: MessagesSquare },
   { href: "/knowledge", label: "คลังคู่มือ AI", icon: BookOpen, allowedRoles: ["SUPER_ADMIN"] },
   { href: "/logs", label: "บันทึกกิจกรรม", icon: History, allowedRoles: ["SUPER_ADMIN"] },
+  { href: "/pending", label: "แชทค้าง", icon: AlertCircle },
   { href: "/drafts", label: "Draft รอส่ง", icon: ClipboardList },
   { href: "/tickets", label: "รายงานปัญหา", icon: Ticket },
 ];
