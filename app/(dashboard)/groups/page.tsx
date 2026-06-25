@@ -9,10 +9,11 @@ export default async function GroupsPage() {
   const user = await requireAnyRole();
   const [groups, collections] = await Promise.all([getGroups(), getCollections()]);
   const canEdit = user.role === "SUPER_ADMIN" || user.role === "MANAGER";
+  const canDelete = user.role === "SUPER_ADMIN";
   return (
     <main className="space-y-6">
       <h1 className="font-display text-2xl font-bold">ลงทะเบียนกลุ่ม Telegram</h1>
-      <GroupsManager initialGroups={groups} collections={collections} canEdit={canEdit} />
+      <GroupsManager initialGroups={groups} collections={collections} canEdit={canEdit} canDelete={canDelete} />
     </main>
   );
 }

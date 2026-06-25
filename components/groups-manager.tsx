@@ -68,10 +68,12 @@ export function GroupsManager({
   initialGroups,
   collections,
   canEdit = true,
+  canDelete = true,
 }: {
   initialGroups: TelegramGroup[];
   collections: KnowledgeCollection[];
   canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<TelegramGroup | null>(null);
@@ -158,14 +160,14 @@ export function GroupsManager({
             <Send className="size-4" /> {pinging === g.id ? "กำลังส่ง…" : "ทดสอบ"}
           </Button>
           {canEdit && (
-            <>
-              <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => setEditing(g)}>
-                <Pencil className="size-4" />
-              </Button>
-              <Button size="icon" variant="ghost" aria-label="ลบกลุ่ม" onClick={() => setConfirmDel(g)}>
-                <Trash2 className="size-4 text-danger" />
-              </Button>
-            </>
+            <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => setEditing(g)}>
+              <Pencil className="size-4" />
+            </Button>
+          )}
+          {canDelete && (
+            <Button size="icon" variant="ghost" aria-label="ลบกลุ่ม" onClick={() => setConfirmDel(g)}>
+              <Trash2 className="size-4 text-danger" />
+            </Button>
           )}
         </div>
       ),
