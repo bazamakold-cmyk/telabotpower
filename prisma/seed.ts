@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 const db = new PrismaClient();
 
@@ -15,8 +15,8 @@ async function main() {
   await db.loginAttempt.deleteMany();
   await db.user.deleteMany();
 
-  const passwordHash = await bcrypt.hash("admin123", 10);
-  const pinHash = await bcrypt.hash("123456", 10);
+  const passwordHash = await hash("admin123", 10);
+  const pinHash = await hash("123456", 10);
 
   await db.user.create({
     data: { name: "ผู้ดูแลระบบ", role: "SUPER_ADMIN", username: "admin147", passwordHash },
