@@ -156,9 +156,11 @@ export function GroupsManager({
       header: "จัดการ",
       render: (g) => (
         <div className="flex gap-1">
-          <Button size="sm" variant="outline" disabled={pinging === g.id} onClick={() => ping(g)}>
-            <Send className="size-4" /> {pinging === g.id ? "กำลังส่ง…" : "ทดสอบ"}
-          </Button>
+          {canEdit && (
+            <Button size="sm" variant="outline" disabled={pinging === g.id} onClick={() => ping(g)}>
+              <Send className="size-4" /> {pinging === g.id ? "กำลังส่ง…" : "ทดสอบ"}
+            </Button>
+          )}
           {canEdit && (
             <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => setEditing(g)}>
               <Pencil className="size-4" />
