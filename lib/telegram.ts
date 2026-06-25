@@ -8,7 +8,7 @@ export async function getBotToken(): Promise<string | null> {
     try {
       return decrypt(s.botToken);
     } catch {
-      return null;
+      // ENCRYPTION_KEY mismatch — fall through to env fallback
     }
   }
   return process.env.TELEGRAM_BOT_TOKEN ?? null;

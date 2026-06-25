@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, MessageSquare, Pencil, X } from "lucide-react";
+import { Check, MessageSquare, Pencil, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type Draft = {
   id: string;
@@ -22,6 +23,7 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(draft.draftText);
   const [busy, setBusy] = useState<"send" | "skip" | null>(null);
+  const [rating, setRating] = useState<1 | -1 | null>(null);
 
   function confirmEdit() {
     setText(editText.trim() || text);
@@ -31,6 +33,16 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   function cancelEdit() {
     setEditText(text);
     setEditing(false);
+  }
+
+  async function rate(r: 1 | -1) {
+    setRating(r);
+    await apiFetch(`/api/drafts/${draft.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "rate", rating: r }),
+    });
+    toast.success(r === 1 ? "ขอบคุณ — AI จะปรับปรุงจากคะแนนนี้" : "รับทราบ — AI จะเรียนรู้จากคำตอบที่ไม่ดี");
   }
 
   async function act(action: "send" | "skip") {
@@ -45,7 +57,8 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
       toast.success(action === "send" ? "ส่งแล้ว ✓" : "ข้ามแล้ว");
       onDone();
     } else {
-      toast.error("เกิดข้อผิดพลาด");
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "เกิดข้อผิดพลาด");
     }
   }
 
@@ -73,7 +86,12 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">คำตอบของ AI</p>
           {!editing && (
-            <Button size="sm" variant="ghost" className="h-6 gap-1 px-2 text-xs" onClick={() => { setEditText(text); setEditing(true); }}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 gap-1 px-2 text-xs"
+              onClick={() => { setEditText(text); setEditing(true); }}
+            >
               <Pencil className="size-3" /> แก้ไข
             </Button>
           )}
@@ -100,26 +118,56 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
         )}
       </div>
 
-      {/* Actions */}
+      {/* Rating + Actions */}
       {!editing && (
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            disabled={busy !== null}
-            onClick={() => act("skip")}
-          >
-            <X className="size-4" /> ข้าม
-          </Button>
-          <Button
-            size="sm"
-            disabled={busy !== null || !text.trim()}
-            onClick={() => act("send")}
-          >
-            <Check className="size-4" />
-            {busy === "send" ? "กำลังส่ง…" : "ส่งไปกลุ่ม"}
-          </Button>
+        <div className="flex items-center justify-between border-t pt-3">
+          {/* Rating */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">คุณภาพคำตอบ:</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={cn(
+                "h-7 gap-1 px-2 text-xs",
+                rating === 1 && "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20"
+              )}
+              onClick={() => rate(1)}
+            >
+              <ThumbsUp className="size-3.5" /> ดี
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={cn(
+                "h-7 gap-1 px-2 text-xs",
+                rating === -1 && "bg-red-500/15 text-red-400 hover:bg-red-500/20"
+              )}
+              onClick={() => rate(-1)}
+            >
+              <ThumbsDown className="size-3.5" /> ปรับปรุง
+            </Button>
+          </div>
+
+          {/* Send/Skip */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+              disabled={busy !== null}
+              onClick={() => act("skip")}
+            >
+              <X className="size-4" /> ข้าม
+            </Button>
+            <Button
+              size="sm"
+              disabled={busy !== null || !text.trim()}
+              onClick={() => act("send")}
+            >
+              <Check className="size-4" />
+              {busy === "send" ? "กำลังส่ง…" : "ส่งไปกลุ่ม"}
+            </Button>
+          </div>
         </div>
       )}
     </div>
