@@ -38,7 +38,8 @@ function PendingCard({ chat }: { chat: PendingChat }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <MessageSquare className="size-4 text-primary shrink-0" />
-          <span className="font-semibold">{chat.groupName}</span>
+          <span className="text-xs text-muted-foreground">กลุ่ม:</span>
+          <span className="font-semibold text-primary">{chat.groupName}</span>
           <span className={cn(
             "rounded-full px-2 py-0.5 text-[11px] font-bold",
             wait.level === "danger" ? "bg-red-500/15 text-red-400"
