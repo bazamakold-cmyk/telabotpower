@@ -40,3 +40,18 @@ export async function requireSuperAdmin() {
   if (user.role !== "SUPER_ADMIN") redirect("/assistant");
   return user;
 }
+
+/** Allow SUPER_ADMIN and MANAGER; redirect others to /assistant. */
+export async function requireManagerOrAbove() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (user.role !== "SUPER_ADMIN" && user.role !== "MANAGER") redirect("/assistant");
+  return user;
+}
+
+/** Allow all authenticated users; redirect unauthenticated to /login. */
+export async function requireAnyRole() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  return user;
+}

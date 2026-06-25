@@ -71,8 +71,10 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const isSuper = userRole === "SUPER_ADMIN";
-  const visiblePrimary = primaryNav.filter((i) => !i.superOnly || isSuper);
-  const visibleSecondary = secondaryNav.filter((i) => !i.superOnly || isSuper);
+  const canSee = (item: { allowedRoles?: string[] }) =>
+    !item.allowedRoles || (userRole ? item.allowedRoles.includes(userRole) : false);
+  const visiblePrimary = primaryNav.filter(canSee);
+  const visibleSecondary = secondaryNav.filter(canSee);
 
   return (
     <div className="min-h-dvh">
@@ -149,7 +151,14 @@ export function AppShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className={cn("glass fixed inset-x-0 bottom-0 z-30 grid border-t pb-[env(safe-area-inset-bottom)] lg:hidden", isSuper ? "grid-cols-6" : "grid-cols-2")}>
+      <nav className={cn(
+        "glass fixed inset-x-0 bottom-0 z-30 grid border-t pb-[env(safe-area-inset-bottom)] lg:hidden",
+        visiblePrimary.length <= 2 ? "grid-cols-2"
+        : visiblePrimary.length === 3 ? "grid-cols-3"
+        : visiblePrimary.length === 4 ? "grid-cols-4"
+        : visiblePrimary.length === 5 ? "grid-cols-5"
+        : "grid-cols-6"
+      )}>
         {visiblePrimary.map((item) => {
           const Icon = item.icon;
           const active = matchActive(pathname, item.href);

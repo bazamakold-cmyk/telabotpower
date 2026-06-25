@@ -11,7 +11,7 @@ import { getKpis, getResponseTrend } from "@/lib/services/stats";
 import { getTickets } from "@/lib/services/tickets";
 import { getUsers } from "@/lib/services/users";
 import type { Ticket } from "@/lib/types";
-import { requireSuperAdmin } from "@/lib/session";
+import { requireManagerOrAbove } from "@/lib/session";
 
 const columns: Column<Ticket>[] = [
   { key: "id", header: "ID งาน", className: "font-mono", render: (r) => r.code ?? r.id },
@@ -31,7 +31,7 @@ const columns: Column<Ticket>[] = [
 ];
 
 export default async function DashboardPage() {
-  await requireSuperAdmin();
+  await requireManagerOrAbove();
   const [kpis, trend, tickets, users, feedback] = await Promise.all([
     getKpis(),
     getResponseTrend(),
