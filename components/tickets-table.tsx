@@ -325,24 +325,10 @@ export function TicketsTable({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="t-status">สถานะ</Label>
-                  <Select
-                    value={draft.status}
-                    onValueChange={(v) =>
-                      setDraft((d) => (d ? { ...d, status: v as TicketStatus } : d))
-                    }
-                  >
-                    <SelectTrigger id="t-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(([val, text]) => (
-                        <SelectItem key={val} value={val}>
-                          {text}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>สถานะ</Label>
+                  <div className="flex h-9 items-center rounded-lg border bg-muted/30 px-3 text-sm text-muted-foreground">
+                    รับเรื่อง <span className="ml-1.5 text-xs">(เริ่มต้นเสมอ)</span>
+                  </div>
                 </div>
               </div>
 
