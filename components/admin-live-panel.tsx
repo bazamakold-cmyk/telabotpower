@@ -1,7 +1,7 @@
 import { OnlineDot } from "@/components/online-dot";
 import type { User } from "@/lib/types";
 
-export function AdminLivePanel({ admins, sla }: { admins: User[]; sla: number }) {
+export function AdminLivePanel({ admins, sla }: { admins: User[]; sla: number | null }) {
   return (
     <div className="glass relative overflow-hidden rounded-xl p-5">
       <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
@@ -28,18 +28,20 @@ export function AdminLivePanel({ admins, sla }: { admins: User[]; sla: number })
         ))}
       </ul>
 
-      <div className="mt-4 space-y-1.5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">เป้าหมาย SLA วันนี้</span>
-          <span className="font-display font-bold tabular-nums">{sla}%</span>
+      {sla !== null && (
+        <div className="mt-4 space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">คุณภาพ AI (จากคะแนน 👍)</span>
+            <span className="font-display font-bold tabular-nums">{sla}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary shadow-[0_0_10px_var(--primary)]"
+              style={{ width: `${sla}%` }}
+            />
+          </div>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary shadow-[0_0_10px_var(--primary)]"
-            style={{ width: `${sla}%` }}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

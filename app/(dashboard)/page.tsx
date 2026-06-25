@@ -54,10 +54,9 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
           label="เวลาเฉลี่ยการตอบกลับ"
-          value={String(kpis.avgResponseMin)}
-          unit="นาที"
+          value={kpis.avgResponseMin > 0 ? String(kpis.avgResponseMin) : "—"}
+          unit={kpis.avgResponseMin > 0 ? "นาที" : "ยังไม่มีข้อมูล"}
           icon={Clock}
-          delta={{ label: "12%", tone: "good", dir: "down" }}
         />
         <KpiCard
           label="AI ตอบทั้งหมด"
@@ -77,10 +76,9 @@ export default async function DashboardPage() {
           }
         />
         <KpiCard
-          label="งานสำเร็จ (Done) วันนี้"
+          label="งานสำเร็จ (Done) ทั้งหมด"
           value={String(kpis.done)}
           icon={CheckCircle2}
-          delta={{ label: "9%", tone: "good", dir: "up" }}
         />
       </div>
 
@@ -88,7 +86,7 @@ export default async function DashboardPage() {
         <div className="lg:col-span-2">
           <ResponseTrendChart data={trend} />
         </div>
-        <AdminLivePanel admins={admins} sla={86} />
+        <AdminLivePanel admins={admins} sla={kpis.aiQualityScore > 0 ? kpis.aiQualityScore : null} />
       </div>
 
       <section className="space-y-3">
