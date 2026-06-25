@@ -24,6 +24,7 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   const [editText, setEditText] = useState(draft.draftText);
   const [busy, setBusy] = useState<"send" | "skip" | null>(null);
   const [rating, setRating] = useState<1 | -1 | null>(null);
+  const [ratingBusy, setRatingBusy] = useState(false);
 
   function confirmEdit() {
     setText(editText.trim() || text);
@@ -36,13 +37,20 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   }
 
   async function rate(r: 1 | -1) {
-    setRating(r);
-    await apiFetch(`/api/drafts/${draft.id}`, {
+    if (ratingBusy || rating !== null) return; // ป้องกัน rate ซ้ำ
+    setRatingBusy(true);
+    const res = await apiFetch(`/api/drafts/${draft.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action: "rate", rating: r }),
     });
-    toast.success(r === 1 ? "ขอบคุณ — AI จะปรับปรุงจากคะแนนนี้" : "รับทราบ — AI จะเรียนรู้จากคำตอบที่ไม่ดี");
+    setRatingBusy(false);
+    if (res.ok) {
+      setRating(r);
+      toast.success(r === 1 ? "ขอบคุณ — AI จะปรับปรุงจากคะแนนนี้" : "รับทราบ — AI จะเรียนรู้จากคำตอบที่ไม่ดี");
+    } else {
+      toast.error("บันทึกคะแนนไม่สำเร็จ");
+    }
   }
 
   async function act(action: "send" | "skip") {
@@ -127,6 +135,7 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
             <Button
               size="sm"
               variant="ghost"
+              disabled={ratingBusy || rating !== null}
               className={cn(
                 "h-7 gap-1 px-2 text-xs",
                 rating === 1 && "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20"
@@ -138,6 +147,7 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
             <Button
               size="sm"
               variant="ghost"
+              disabled={ratingBusy || rating !== null}
               className={cn(
                 "h-7 gap-1 px-2 text-xs",
                 rating === -1 && "bg-red-500/15 text-red-400 hover:bg-red-500/20"

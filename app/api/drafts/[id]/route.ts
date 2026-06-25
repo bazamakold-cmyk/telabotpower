@@ -33,8 +33,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const col = draft.group.collections[0];
     await db.answerLog.create({
       data: {
-        collectionId: col?.id ?? "unknown",
-        collectionName: col?.name ?? draft.group.name,
+        collectionId: col?.id ?? "draft-rating",
+        collectionName: col?.name ?? `[Draft] ${draft.group.name}`,
         question: draft.sourceMsg,
         answer: draft.draftText,
         confidence: 0,
