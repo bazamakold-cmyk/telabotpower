@@ -101,6 +101,7 @@ model TelegramGroup {
   createdAt   DateTime              @default(now())
   collections KnowledgeCollection[] @relation("GroupCollections")
   tickets     Ticket[]
+  aiDrafts    AiDraft[]
 }
 
 model KnowledgeCollection {
@@ -193,13 +194,14 @@ model ChatMessage {
 }
 
 model AiDraft {
-  id        String      @id @default(cuid())
+  id        String        @id @default(cuid())
   groupId   String
+  group     TelegramGroup @relation(fields: [groupId], references: [id])
   sourceMsg String
   draftText String
-  status    DraftStatus @default(PENDING)
+  status    DraftStatus   @default(PENDING)
   adminId   String?
-  createdAt DateTime    @default(now())
+  createdAt DateTime      @default(now())
 }
 
 model AnswerLog {

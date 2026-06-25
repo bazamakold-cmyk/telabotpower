@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Send } from "lucide-react";
+import { Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -73,6 +73,7 @@ export function GroupsManager({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<TelegramGroup | null>(null);
+  const [confirmDel, setConfirmDel] = useState<TelegramGroup | null>(null);
   const [pinging, setPinging] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -82,6 +83,21 @@ export function GroupsManager({
     setPinging(null);
     if (r.ok) toast.success(`ส่งข้อความทดสอบเข้า “${g.name}” สำเร็จ`);
     else toast.error(r.error);
+  }
+
+  async function deleteGroup() {
+    if (!confirmDel) return;
+    setBusy(true);
+    const res = await fetch(`/api/groups/${confirmDel.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(`ลบกลุ่ม "${confirmDel.name}" แล้ว`);
+      setConfirmDel(null);
+      router.refresh();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      toast.error(j.error ?? "ลบไม่สำเร็จ");
+    }
   }
 
   async function save() {
@@ -142,6 +158,14 @@ export function GroupsManager({
           <Button size="icon" variant="ghost" aria-label="แก้ไข" onClick={() => setEditing(g)}>
             <Pencil className="size-4" />
           </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="ลบกลุ่ม"
+            onClick={() => setConfirmDel(g)}
+          >
+            <Trash2 className="size-4 text-danger" />
+          </Button>
         </div>
       ),
     },
@@ -156,6 +180,25 @@ export function GroupsManager({
       </div>
 
       <ResponsiveTable columns={columns} data={initialGroups} getRowKey={(g) => g.id} />
+
+      <Dialog open={confirmDel !== null} onOpenChange={(o) => { if (!o && !busy) setConfirmDel(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ลบกลุ่มนี้?</DialogTitle>
+            <DialogDescription>
+              ลบ "{confirmDel?.name}" ({confirmDel?.chatId}) อย่างถาวร — กู้คืนไม่ได้
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" disabled={busy} onClick={() => setConfirmDel(null)}>
+              ยกเลิก
+            </Button>
+            <Button type="button" variant="destructive" disabled={busy} onClick={deleteGroup}>
+              {busy ? "กำลังลบ…" : "ลบถาวร"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto">

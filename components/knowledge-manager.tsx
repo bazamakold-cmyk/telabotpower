@@ -235,32 +235,36 @@ export function KnowledgeManager({
         </form>
       </div>
 
-      <section className="space-y-3">
+      <section className="space-y-2">
         <h3 className="font-display font-semibold">เอกสารในคลังนี้</h3>
         {visible.length === 0 ? (
           <EmptyState title="ยังไม่มีเอกสารในคลังนี้" description="อัปโหลดไฟล์หรือเพิ่ม FAQ ด้านบน" />
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map((d) => (
-              <div key={d.id} className="glass flex items-center justify-between gap-3 rounded-xl p-3">
-                <div className="flex min-w-0 items-center gap-3">
+              <div
+                key={d.id}
+                className="glass flex items-center justify-between gap-2 rounded-lg px-3 py-1.5"
+              >
+                <div className="flex min-w-0 items-center gap-2">
                   {d.type === "FAQ" ? (
-                    <HelpCircle className="size-5 shrink-0 text-primary" aria-hidden />
+                    <HelpCircle className="size-3.5 shrink-0 text-primary" aria-hidden />
                   ) : (
-                    <FileText className="size-5 shrink-0 text-primary" aria-hidden />
+                    <FileText className="size-3.5 shrink-0 text-primary" aria-hidden />
                   )}
-                  <span className="truncate text-sm">{d.title}</span>
+                  <span className="truncate text-xs">{d.title}</span>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1">
                   <IngestBadge status={d.status} />
                   <Button
                     size="icon"
                     variant="ghost"
                     aria-label="ลบ"
                     disabled={pending}
+                    className="size-6"
                     onClick={() => removeDoc(d.id)}
                   >
-                    <Trash2 className="size-4 text-danger" />
+                    <Trash2 className="size-3 text-danger" />
                   </Button>
                 </div>
               </div>

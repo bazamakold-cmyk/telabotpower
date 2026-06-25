@@ -33,3 +33,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  try {
+    await db.ticket.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (typeof e === "object" && e !== null && (e as { code?: string }).code === "P2025") {
+      return NextResponse.json({ error: "ไม่พบงาน" }, { status: 404 });
+    }
+    throw e;
+  }
+}

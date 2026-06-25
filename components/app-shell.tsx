@@ -60,10 +60,12 @@ function Brand() {
 export function AppShell({
   children,
   ticketBadge,
+  draftBadge,
   userName,
 }: {
   children: React.ReactNode;
   ticketBadge?: number;
+  draftBadge?: number;
   userName?: string;
 }) {
   const pathname = usePathname();
@@ -81,7 +83,11 @@ export function AppShell({
               key={item.href}
               item={item}
               active={matchActive(pathname, item.href)}
-              badge={item.href === "/tickets" ? ticketBadge : undefined}
+              badge={
+                item.href === "/tickets" ? ticketBadge
+                : item.href === "/drafts" ? draftBadge
+                : undefined
+              }
             />
           ))}
           <div className="my-2 border-t" />

@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  ClipboardList,
   LayoutDashboard,
   MessagesSquare,
   Settings,
@@ -16,6 +17,7 @@ export const primaryNav: NavItem[] = [
   { href: "/users", label: "จัดการ PIN พนักงาน", icon: Users },
   { href: "/groups", label: "ลงทะเบียนกลุ่ม", icon: MessagesSquare },
   { href: "/knowledge", label: "คลังคู่มือ AI", icon: BookOpen },
+  { href: "/drafts", label: "Draft รอส่ง", icon: ClipboardList },
   { href: "/tickets", label: "รายงานปัญหา", icon: Ticket },
 ];
 

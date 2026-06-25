@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -99,6 +99,7 @@ export function TicketsTable({
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [viewing, setViewing] = useState<Ticket | null>(null);
+  const [deleting, setDeleting] = useState<Ticket | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function setStatusOf(id: string, next: TicketStatus) {
@@ -112,6 +113,20 @@ export function TicketsTable({
       router.refresh();
     } else {
       toast.error("ปรับสถานะไม่สำเร็จ");
+    }
+  }
+
+  async function deleteTicket() {
+    if (!deleting) return;
+    setBusy(true);
+    const res = await fetch(`/api/tickets/${deleting.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (res.ok) {
+      toast.success("ลบรายการแล้ว");
+      setDeleting(null);
+      router.refresh();
+    } else {
+      toast.error("ลบไม่สำเร็จ");
     }
   }
 
@@ -187,6 +202,15 @@ export function TicketsTable({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="ลบรายการ"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleting(r)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
         </div>
       ),
     },
@@ -340,6 +364,23 @@ export function TicketsTable({
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ยืนยันการลบ</DialogTitle>
+            <DialogDescription>
+              ลบรายการ &ldquo;{deleting?.tag}&rdquo; ({deleting?.code ?? deleting?.id}) ออกจากระบบ? ไม่สามารถกู้คืนได้
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleting(null)}>ยกเลิก</Button>
+            <Button variant="destructive" disabled={busy} onClick={deleteTicket}>
+              {busy ? "กำลังลบ…" : "ลบรายการ"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

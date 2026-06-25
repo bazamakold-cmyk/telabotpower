@@ -4,5 +4,22 @@
     "allow": [],
     "deny": []
   },
-  "hooks": {}
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "asyncRewake": true,
+            "statusMessage": "Checking graphify.md...",
+            "rewakeMessage": "A new project file was just created in telabotpower.",
+            "rewakeSummary": "Update docs/graphify.md",
+            "command": "$d = [Console]::In.ReadToEnd() | ConvertFrom-Json; $f = if ($d.tool_input -and $d.tool_input.file_path) { $d.tool_input.file_path } else { '' }; if ($f -match 'telabotpower' -and $f -match '(page\\.tsx|route\\.ts|schema\\.prisma|\\\\lib\\\\[^\\\\]+\\.ts|\\\\components\\\\[^\\\\]+\\.tsx)$') { Write-Output '{\"systemMessage\":\"New project file created - please update docs/graphify.md to reflect the change.\"}'; exit 2 }"
+          }
+        ]
+      }
+    ]
+  }
 }
