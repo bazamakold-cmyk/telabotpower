@@ -187,6 +187,13 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
                   value={editing.telegramId ?? ""}
                   onChange={(e) => setEditing({ ...editing, telegramId: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  ใช้ระบุตัวตนว่าแอดมินตอบแชทหรือยัง —{" "}
+                  <span className="font-medium text-foreground">วิธีหา ID:</span>{" "}
+                  เปิด Telegram → ค้นหา{" "}
+                  <span className="font-mono font-semibold text-primary">@userinfobot</span>{" "}
+                  → กด Start → บอทจะแสดง <span className="font-medium">Id: ตัวเลข</span> นั่นคือ Telegram ID
+                </p>
               </div>
 
               <div className="space-y-1.5">
