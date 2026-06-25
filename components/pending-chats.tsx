@@ -17,11 +17,12 @@ type PendingChat = {
 
 function waitingLabel(iso: string): { text: string; level: "ok" | "warn" | "danger" } {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (minutes < 30) return { text: `${minutes} นาที`, level: "ok" };
-  if (minutes < 120) return { text: `${minutes} นาที`, level: "warn" };
+  if (minutes < 3)  return { text: `${minutes} นาที`, level: "ok" };
+  if (minutes < 10) return { text: `${minutes} นาที`, level: "warn" };
   const hours = Math.floor(minutes / 60);
   const rem = minutes % 60;
-  return { text: rem > 0 ? `${hours} ชม. ${rem} นาที` : `${hours} ชั่วโมง`, level: "danger" };
+  const text = hours > 0 ? (rem > 0 ? `${hours} ชม. ${rem} นาที` : `${hours} ชั่วโมง`) : `${minutes} นาที`;
+  return { text, level: "danger" };
 }
 
 function PendingCard({ chat }: { chat: PendingChat }) {
