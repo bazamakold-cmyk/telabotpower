@@ -171,7 +171,6 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                     <SelectItem value="MANAGER">Manager</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>

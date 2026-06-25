@@ -16,6 +16,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   const d = parsed.data;
 
+  if (d.role === "SUPER_ADMIN") {
+    return NextResponse.json({ error: "ไม่สามารถสร้าง Super Admin ผ่าน UI ได้" }, { status: 403 });
+  }
+
   if (d.pin && (await isPinTaken(d.pin))) {
     return NextResponse.json({ error: "PIN นี้มีผู้ใช้แล้ว" }, { status: 409 });
   }
