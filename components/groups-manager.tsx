@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { Bot, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -70,11 +70,13 @@ export function GroupsManager({
   collections,
   canEdit = true,
   canDelete = true,
+  botUsername = null,
 }: {
   initialGroups: TelegramGroup[];
   collections: KnowledgeCollection[];
   canEdit?: boolean;
   canDelete?: boolean;
+  botUsername?: string | null;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<TelegramGroup | null>(null);
@@ -179,6 +181,25 @@ export function GroupsManager({
 
   return (
     <div className="space-y-4">
+      {/* Bot add-to-group hint */}
+      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+        <Bot className="mt-0.5 size-4 shrink-0 text-primary" />
+        <div className="text-sm">
+          {botUsername ? (
+            <>
+              <span className="text-muted-foreground">เพิ่ม Bot ลงในกลุ่ม Telegram ก่อนลงทะเบียน — ค้นหา </span>
+              <span className="font-mono font-semibold text-primary">@{botUsername}</span>
+              <span className="text-muted-foreground"> แล้วเพิ่มเป็น Admin (อนุญาตส่งข้อความ)</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">
+              ยังไม่พบ Bot — กรุณาตั้ง Bot Token ที่หน้า{" "}
+              <span className="font-medium text-foreground">ตั้งค่า Bot & AI</span> ก่อน
+            </span>
+          )}
+        </div>
+      </div>
+
       {canEdit && (
         <div className="flex justify-end">
           <Button onClick={() => setEditing(emptyDraft())}>
