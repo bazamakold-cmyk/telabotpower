@@ -4,6 +4,7 @@ import { Eye, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 import { OnlineDot } from "@/components/online-dot";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { RichTextEditor } from "@/components/rich-text-editor";
@@ -103,7 +104,7 @@ export function TicketsTable({
   const [busy, setBusy] = useState(false);
 
   async function setStatusOf(id: string, next: TicketStatus) {
-    const res = await fetch(`/api/tickets/${id}`, {
+    const res = await apiFetch(`/api/tickets/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status: next }),
@@ -119,7 +120,7 @@ export function TicketsTable({
   async function deleteTicket() {
     if (!deleting) return;
     setBusy(true);
-    const res = await fetch(`/api/tickets/${deleting.id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/tickets/${deleting.id}`, { method: "DELETE" });
     setBusy(false);
     if (res.ok) {
       toast.success("ลบรายการแล้ว");
@@ -133,7 +134,7 @@ export function TicketsTable({
   async function addTicket() {
     if (!draft) return;
     setBusy(true);
-    const res = await fetch("/api/tickets", {
+    const res = await apiFetch("/api/tickets", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

@@ -4,6 +4,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 import { OnlineDot } from "@/components/online-dot";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { Button } from "@/components/ui/button";
@@ -67,12 +68,12 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
       ...(pin.length === 6 ? { pin } : {}),
     };
     const res = editing.id
-      ? await fetch(`/api/users/${editing.id}`, {
+      ? await apiFetch(`/api/users/${editing.id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         })
-      : await fetch("/api/users", {
+      : await apiFetch("/api/users", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
@@ -90,7 +91,7 @@ export function UsersManager({ initialUsers }: { initialUsers: User[] }) {
 
   async function confirmDelete() {
     if (!deleting) return;
-    const res = await fetch(`/api/users/${deleting.id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/users/${deleting.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success(`ลบ ${deleting.name} แล้ว`);
       setDeleting(null);

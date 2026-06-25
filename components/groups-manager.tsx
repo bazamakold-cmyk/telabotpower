@@ -4,6 +4,7 @@ import { Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 import { pingGroup } from "@/lib/actions/telegram";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { Button } from "@/components/ui/button";
@@ -92,7 +93,7 @@ export function GroupsManager({
   async function deleteGroup() {
     if (!confirmDel) return;
     setBusy(true);
-    const res = await fetch(`/api/groups/${confirmDel.id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/groups/${confirmDel.id}`, { method: "DELETE" });
     setBusy(false);
     if (res.ok) {
       toast.success(`ลบกลุ่ม "${confirmDel.name}" แล้ว`);
@@ -115,12 +116,12 @@ export function GroupsManager({
       collectionIds: editing.collectionIds,
     };
     const res = editing.id
-      ? await fetch(`/api/groups/${editing.id}`, {
+      ? await apiFetch(`/api/groups/${editing.id}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),
         })
-      : await fetch("/api/groups", {
+      : await apiFetch("/api/groups", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(payload),

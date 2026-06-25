@@ -4,6 +4,7 @@ import { Check, MessageSquare, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-fetch";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +23,7 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
 
   async function act(action: "send" | "skip") {
     setBusy(action);
-    const res = await fetch(`/api/drafts/${draft.id}`, {
+    const res = await apiFetch(`/api/drafts/${draft.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action, text: action === "send" ? text : undefined }),

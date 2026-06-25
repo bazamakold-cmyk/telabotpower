@@ -2,6 +2,7 @@
 
 import { AlertCircle, Clock, MessageSquare, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api-fetch";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ export function PendingChats({ initial }: { initial: PendingChat[] }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/pending-chats");
+      const res = await apiFetch("/api/pending-chats");
       if (res.ok) {
         setChats(await res.json());
         setLastRefresh(new Date());
