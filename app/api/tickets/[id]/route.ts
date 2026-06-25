@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { getCurrentUser } from "@/lib/session";
 import { ticketCreateSchema } from "@/lib/validators";
 
@@ -40,7 +41,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   try {
+    const ticket = await db.ticket.findUnique({ where: { id } });
     await db.ticket.delete({ where: { id } });
+    await logActivity(user.id, "DELETE_TICKET", ticket?.tag ?? id, `#${ticket?.seq}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (typeof e === "object" && e !== null && (e as { code?: string }).code === "P2025") {

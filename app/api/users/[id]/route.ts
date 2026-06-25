@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashSecret } from "@/lib/hash";
+import { logActivity } from "@/lib/activity";
 import { requireRole } from "@/lib/session";
 import { isPinTaken } from "@/lib/user-helpers";
 import { userCreateSchema } from "@/lib/validators";
@@ -27,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const pinHash = d.pin ? await hashSecret(d.pin) : undefined;
 
   try {
-    await db.user.update({
+    const updated = await db.user.update({
       where: { id },
       data: {
         ...(d.name !== undefined ? { name: d.name } : {}),
@@ -37,6 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(pinHash ? { pinHash } : {}),
       },
     });
+    await logActivity(actor.id, "UPDATE_USER", updated.name);
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (isNotFound(e)) return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
@@ -61,5 +63,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
   }
   await db.user.delete({ where: { id } });
+  await logActivity(actor.id, "DELETE_USER", target.name, `role: ${target.role}`);
   return NextResponse.json({ ok: true });
 }

@@ -64,17 +64,19 @@ enum DraftStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
   role         Role
-  username     String?  @unique
+  username     String?       @unique
   passwordHash String?
   pinHash      String?
-  telegramId   String?  @unique
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  telegramId   String?       @unique
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
   tickets      Ticket[]
+  activityLogs ActivityLog[]
 }
+
 
 model Session {
   id         String   @id @default(cuid())
@@ -202,6 +204,19 @@ model AiDraft {
   status    DraftStatus   @default(PENDING)
   adminId   String?
   createdAt DateTime      @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  target    String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model AnswerLog {

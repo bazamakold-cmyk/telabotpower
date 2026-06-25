@@ -39,10 +39,13 @@ function DraftCard({ draft, onDone }: { draft: Draft; onDone: () => void }) {
   return (
     <div className="glass rounded-xl space-y-3 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="space-y-0.5">
-          <p className="text-xs font-semibold tracking-wide text-primary">{draft.group.name}</p>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="size-3.5 text-primary" />
+            <span className="text-xs text-muted-foreground">กลุ่ม:</span>
+            <span className="text-xs font-semibold text-primary">{draft.group.name}</span>
+          </div>
           <p className="text-sm text-muted-foreground">
-            <MessageSquare className="mr-1 inline size-3.5" />
             ลูกค้าถาม: <span className="font-medium text-foreground">&ldquo;{draft.sourceMsg}&rdquo;</span>
           </p>
         </div>

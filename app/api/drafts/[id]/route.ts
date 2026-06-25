@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { getCurrentUser } from "@/lib/session";
 import { sendMessage } from "@/lib/telegram";
 
 export const runtime = "nodejs";
 
-// PATCH: send or skip a draft
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -22,6 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (body.action === "skip") {
     await db.aiDraft.update({ where: { id }, data: { status: "SKIPPED", adminId: user.id } });
+    await logActivity(user.id, "SKIP_DRAFT", draft.group.name, draft.sourceMsg.slice(0, 80));
     return NextResponse.json({ ok: true });
   }
 
@@ -30,17 +31,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const sent = await sendMessage(draft.group.chatId, text);
   if (!sent.ok) return NextResponse.json({ error: "ส่งไม่สำเร็จ" }, { status: 502 });
 
-  await db.aiDraft.update({
-    where: { id },
-    data: {
-      status: body.text?.trim() ? "EDITED" : "SENT",
-      draftText: text,
-      adminId: user.id,
-    },
-  });
+  const status = body.text?.trim() ? "EDITED" : "SENT";
+  await db.aiDraft.update({ where: { id }, data: { status, draftText: text, adminId: user.id } });
   await db.chatMessage.create({
     data: { groupId: draft.groupId, tgUserId: "bot", role: "BOT", text, sentAt: new Date() },
   });
+  await logActivity(user.id, "SEND_DRAFT", draft.group.name, draft.sourceMsg.slice(0, 80));
 
   return NextResponse.json({ ok: true });
 }

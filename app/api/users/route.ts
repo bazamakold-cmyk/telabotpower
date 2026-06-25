@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashSecret } from "@/lib/hash";
+import { logActivity } from "@/lib/activity";
 import { requireRole } from "@/lib/session";
 import { isPinTaken } from "@/lib/user-helpers";
 import { userCreateSchema } from "@/lib/validators";
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
         pinHash: d.pin ? await hashSecret(d.pin) : null,
       },
     });
+    await logActivity(actor.id, "CREATE_USER", d.name, `role: ${d.role}`);
     return NextResponse.json({ id: user.id });
   } catch {
     return NextResponse.json({ error: "Telegram ID หรือ username ซ้ำ" }, { status: 409 });

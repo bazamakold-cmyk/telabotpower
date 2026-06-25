@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { requireRole } from "@/lib/session";
 import { groupCreateSchema } from "@/lib/validators";
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
         collections: { connect: d.collectionIds.map((id) => ({ id })) },
       },
     });
+    await logActivity(actor.id, "CREATE_GROUP", d.name, `chatId: ${d.chatId}`);
     return NextResponse.json({ id: group.id });
   } catch {
     return NextResponse.json({ error: "Chat ID ซ้ำ" }, { status: 409 });
