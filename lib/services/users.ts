@@ -8,14 +8,22 @@ export async function getUsers(): Promise<User[]> {
     await delay(120);
     return mockUsers;
   }
-  const rows = await db.user.findMany({ orderBy: { createdAt: "desc" } });
+  const now = new Date();
+  const [rows, activeSessions] = await Promise.all([
+    db.user.findMany({ orderBy: { createdAt: "desc" } }),
+    db.session.findMany({
+      where: { expiresAt: { gt: now } },
+      select: { userId: true },
+    }),
+  ]);
+  const onlineIds = new Set(activeSessions.map((s) => s.userId));
   return rows.map((u) => ({
     id: u.id,
     name: u.name,
     role: u.role,
     username: u.username ?? undefined,
     telegramId: u.telegramId ?? undefined,
-    pinOnline: false, // real online status arrives in Phase 7 (Redis heartbeat)
+    pinOnline: onlineIds.has(u.id),
     isActive: u.isActive,
   }));
 }
