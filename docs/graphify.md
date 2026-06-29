@@ -25,6 +25,7 @@ graph TB
         AUTH_API["Auth API\n/api/auth/*\nPIN · Super · Logout · Session"]:::api
         DATA_API["Data API\n/api/tickets · /api/groups\n/api/users"]:::api
         WEBHOOK["Telegram Webhook\n/api/telegram/webhook\n(public, secret-token auth)"]:::api
+        SUM_WEBHOOK["Summary Bot Webhook\n/api/telegram/summary-webhook\n(admin group only)"]:::api
     end
 
     subgraph SERVER["⚙️ Server Logic (lib/)"]
@@ -55,6 +56,7 @@ graph TB
     DATA_API --> CORE
     WEBHOOK --> CORE
     WEBHOOK --> ACTIONS
+    SUM_WEBHOOK --> SUM_C
 
     ACTIONS --> SERVICES
     ACTIONS --> CORE
@@ -102,6 +104,7 @@ graph LR
     API_DIR --> GROUPS_API["groups/\n[id]/\nGET POST PATCH DELETE"]:::api
     API_DIR --> USERS_API["users/\n[id]/\nGET POST PATCH DELETE"]:::api
     API_DIR --> WEBHOOK_API["telegram/\nwebhook/\nPOST only"]:::api
+    API_DIR --> SUM_WEBHOOK_API["telegram/\nsummary-webhook/\nPOST only"]:::api
 ```
 
 ---
