@@ -168,6 +168,15 @@ model BotSetting {
   updatedAt      DateTime @updatedAt
 }
 
+model SummaryBotSetting {
+  id                String   @id @default("default")
+  botToken          String?  // encrypted AES-256-GCM with ENCRYPTION_KEY
+  webhookUrl        String?
+  webhookSecret     String?
+  targetGroupChatId String?  // Telegram chat ID of admin team group
+  updatedAt         DateTime @updatedAt
+}
+
 model AiSetting {
   id                     String   @id @default("default")
   provider               String   @default("anthropic")
