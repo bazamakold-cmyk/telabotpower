@@ -16,15 +16,17 @@ import { Input } from "@/components/ui/input";
 export function SettingsSummaryBotTab({
   hasToken,
   hasChatId,
+  savedChatId,
   webhookUrl,
 }: {
   hasToken: boolean;
   hasChatId: boolean;
+  savedChatId: string | null;
   webhookUrl: string | null;
 }) {
   const [token, setToken] = useState("");
   const [show, setShow] = useState(false);
-  const [chatId, setChatId] = useState("");
+  const [chatId, setChatId] = useState(savedChatId ?? "");
   const [hookUrl, setHookUrl] = useState<string | null>(webhookUrl);
   const [pending, start] = useTransition();
 
@@ -50,7 +52,7 @@ export function SettingsSummaryBotTab({
     if (!chatId.trim()) { toast.error("กรุณากรอก Chat ID"); return; }
     start(async () => {
       const r = await saveSummaryGroupChatId(chatId);
-      if (r.ok) { toast.success("บันทึก Chat ID แล้ว"); setChatId(""); }
+      if (r.ok) toast.success("บันทึก Chat ID แล้ว");
       else toast.error(r.error);
     });
   }

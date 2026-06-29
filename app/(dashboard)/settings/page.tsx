@@ -36,6 +36,7 @@ export default async function SettingsPage() {
           <SettingsSummaryBotTab
             hasToken={!!summaryBot?.botToken}
             hasChatId={!!summaryBot?.targetGroupChatId}
+            savedChatId={summaryBot?.targetGroupChatId ?? null}
             webhookUrl={summaryBot?.webhookUrl ?? null}
           />
         </TabsContent>
