@@ -83,6 +83,11 @@ export function GroupsManager({
   const [confirmDel, setConfirmDel] = useState<TelegramGroup | null>(null);
   const [pinging, setPinging] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(initialGroups.length / PAGE_SIZE));
+  const pagedGroups = initialGroups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   async function ping(g: TelegramGroup) {
     setPinging(g.id);
@@ -151,6 +156,12 @@ export function GroupsManager({
   }
 
   const columns: Column<TelegramGroup>[] = [
+    {
+      key: "seq",
+      header: "#",
+      className: "w-10 text-center tabular-nums text-muted-foreground",
+      render: (_g, i) => (page - 1) * PAGE_SIZE + (i ?? 0) + 1,
+    },
     { key: "name", header: "ชื่อกลุ่ม" },
     { key: "chatId", header: "Chat ID", className: "font-mono" },
     { key: "botMode", header: "โหมดบอท", render: (g) => <BotModeBadge mode={g.botMode} /> },
@@ -208,7 +219,43 @@ export function GroupsManager({
         </div>
       )}
 
-      <ResponsiveTable columns={columns} data={initialGroups} getRowKey={(g) => g.id} />
+      <ResponsiveTable columns={columns} data={pagedGroups} getRowKey={(g) => g.id} />
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            แสดง {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, initialGroups.length)} จาก {initialGroups.length} กลุ่ม
+          </span>
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              ก่อนหน้า
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <Button
+                key={p}
+                variant={p === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPage(p)}
+              >
+                {p}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              ถัดไป
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={confirmDel !== null} onOpenChange={(o) => { if (!o && !busy) setConfirmDel(null); }}>
         <DialogContent>
