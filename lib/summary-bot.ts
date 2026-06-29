@@ -8,25 +8,27 @@ async function getSummaryBotToken(): Promise<string | null> {
   if (s?.botToken) {
     try {
       return decrypt(s.botToken);
-    } catch {
-      // ENCRYPTION_KEY mismatch
+    } catch (e) {
+      console.error("[summary-bot] decrypt failed:", e);
     }
   }
   return null;
 }
 
-async function callSummaryTelegram(
+type SummaryTgResponse<T = unknown> = { ok: boolean; result?: T; description?: string };
+
+async function callSummaryTelegram<T = unknown>(
   token: string,
   method: string,
   params?: Record<string, unknown>
-): Promise<{ ok: boolean; description?: string }> {
+): Promise<SummaryTgResponse<T>> {
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(params ?? {}),
     });
-    return (await res.json()) as { ok: boolean; description?: string };
+    return (await res.json()) as SummaryTgResponse<T>;
   } catch {
     return { ok: false, description: "เชื่อมต่อ Telegram ไม่สำเร็จ" };
   }
@@ -46,8 +48,8 @@ export async function setSummaryWebhook(token: string, url: string, secret: stri
   });
 }
 
-export async function getSummaryBotInfo(token: string) {
-  return callSummaryTelegram(token, "getMe");
+export function getSummaryBotInfo(token: string) {
+  return callSummaryTelegram<{ id: number; username?: string; first_name?: string }>(token, "getMe");
 }
 
 // --- Formatting helpers (pure — exported for tests) ---

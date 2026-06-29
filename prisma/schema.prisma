@@ -201,6 +201,8 @@ model ChatMessage {
   replyToTg String?
   sentAt    DateTime
   createdAt DateTime @default(now())
+
+  @@index([groupId, sentAt])
 }
 
 model AiDraft {
