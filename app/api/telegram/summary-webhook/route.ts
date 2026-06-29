@@ -9,10 +9,9 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const setting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
   const secret = setting?.webhookSecret;
-  if (secret) {
-    const got = req.headers.get("x-telegram-bot-api-secret-token");
-    if (got !== secret) return NextResponse.json({ ok: false }, { status: 401 });
-  }
+  if (!secret) return NextResponse.json({ ok: false }, { status: 401 });
+  const got = req.headers.get("x-telegram-bot-api-secret-token");
+  if (got !== secret) return NextResponse.json({ ok: false }, { status: 401 });
 
   const update = (await req.json().catch(() => null)) as {
     message?: {

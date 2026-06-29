@@ -111,7 +111,10 @@ async function handlePendingChats(): Promise<string> {
           where: { groupId: g.id, role: "CUSTOMER", sentAt: { gt: lastReply.sentAt } },
           orderBy: { sentAt: "asc" },
         })
-      : lastMsg;
+      : await db.chatMessage.findFirst({
+          where: { groupId: g.id, role: "CUSTOMER" },
+          orderBy: { sentAt: "asc" },
+        });
 
     const waitMs = Date.now() - (firstPending?.sentAt ?? new Date()).getTime();
     pending.push({ name: g.name, count: pendingCount, maxWaitMin: Math.floor(waitMs / 60_000) });
