@@ -42,7 +42,7 @@ graph TB
     end
 
     subgraph DB["🗄️ Neon PostgreSQL + pgvector"]
-        MODELS["Core: User · Session · TelegramGroup\nKnowledge: Collection · Doc · Chunk (vector 1024)\nOps: Ticket · ChatMessage · AiDraft\nLogs: AnswerLog · LoginAttempt\nConfig: BotSetting · AiSetting"]:::db
+        MODELS["Core: User · Session · TelegramGroup\nKnowledge: Collection · Doc · Chunk (vector 1024)\nOps: Ticket · ChatMessage · AiDraft\nLogs: AnswerLog · LoginAttempt\nConfig: BotSetting · AiSetting · SummaryBotSetting"]:::db
     end
 
     AUTH_PAGES --> AUTH_API
@@ -321,6 +321,14 @@ erDiagram
         bool aiAutoReply
     }
 
+    SummaryBotSetting {
+        string id PK
+        string botToken
+        string webhookUrl
+        string webhookSecret
+        string targetGroupChatId
+    }
+
     AiSetting {
         string id PK
         string chatModel
@@ -442,4 +450,4 @@ graph LR
 
 ---
 
-> Generated: 2026-06-24 | Stack: Next.js 16 · Prisma 6 · Neon + pgvector · Claude + Voyage · Upstash Redis · Vercel Blob
+> Generated: 2026-06-24 | Updated: 2026-06-29 (Summary Bot) | Stack: Next.js 16 · Prisma 6 · Neon + pgvector · Claude + Voyage · Upstash Redis · Vercel Blob
