@@ -368,6 +368,7 @@ graph LR
         FEED["feedback.ts"]:::action
         SET["settings.ts"]:::action
         TEL_A["telegram.ts (action)"]:::action
+        SUM_A["summary-bot.ts (action)"]:::action
     end
 
     subgraph SERVICES["Services"]
@@ -387,6 +388,7 @@ graph LR
         CRYPTO["crypto.ts"]:::core
         HASH["hash.ts"]:::core
         TEL_C["telegram.ts (core)"]:::core
+        SUM_C["summary-bot.ts (core)\nkeyword dispatch"]:::core
         REDIS["redis.ts"]:::core
         INGEST_C["ingest.ts (core)\nchunkText"]:::core
     end
@@ -412,6 +414,8 @@ graph LR
     SET --> TEL_C
     TEL_A --> TEL_C
     TEL_A --> RAG
+    SUM_A --> SUM_C
+    SUM_A --> DB
 
     SVC_T --> DB
     SVC_K --> DB
@@ -429,6 +433,9 @@ graph LR
     SESSION --> REDIS
     TEL_C --> TG_E
     TEL_C --> CRYPTO
+    SUM_C --> TG_E
+    SUM_C --> DB
+    SUM_C --> CRYPTO
     REDIS --> REDIS_E
     DB --> PRISMA_E
 ```
@@ -445,7 +452,8 @@ graph LR
 | **Role-Based Access** | `lib/session.ts#requireRole()` | SUPER_ADMIN > MANAGER > ADMIN |
 | **Mock Toggle** | `lib/use-mock.ts` + `NEXT_PUBLIC_USE_MOCK` | Dev without DB (mock data) |
 | **Single Session** | `lib/session.ts` + Session model | New login kills old session |
-| **Dynamic Config** | `AiSetting` + `BotSetting` in DB | RAG params + bot token, no redeploy needed |
+| **Dynamic Config** | `AiSetting` + `BotSetting` + `SummaryBotSetting` in DB | RAG params + bot tokens, no redeploy needed |
+| **Summary Bot** | `lib/summary-bot.ts` + `/api/telegram/summary-webhook` | Keyword-triggered admin group bot → pulls live DB stats |
 | **File Storage** | `lib/actions/knowledge.ts` + Vercel Blob | Upload → Blob URL → store in DB → ingest |
 
 ---
