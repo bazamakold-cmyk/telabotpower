@@ -18,7 +18,7 @@ graph TB
         direction TB
         AUTH_PAGES["Auth Pages\n/login · /login/super"]:::page
         DASH_PAGES["Dashboard Pages\n/ · /tickets · /knowledge\n/assistant · /groups\n/users · /settings"]:::page
-        COMPONENTS["50+ Components\nAppShell · KnowledgeManager\nAiAssistant · TicketsTable\nRichTextEditor · Charts"]:::page
+        COMPONENTS["50+ Components\nAppShell · KnowledgeManager\nAiAssistant · TicketsTable\nRichTextEditor · Charts\nSettingsSummaryBotTab"]:::page
     end
 
     subgraph API_LAYER["🔌 API Routes (App Router)"]
