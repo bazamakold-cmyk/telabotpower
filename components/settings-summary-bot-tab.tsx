@@ -7,6 +7,7 @@ import {
   configureSummaryWebhook,
   saveSummaryBotToken,
   saveSummaryGroupChatId,
+  testSavedSummaryBotToken,
   testSummaryBotPing,
   testSummaryBotToken,
 } from "@/lib/actions/summary-bot";
@@ -40,9 +41,10 @@ export function SettingsSummaryBotTab({
   }
 
   function testToken() {
-    if (!token.trim()) { toast.error("กรอก token ก่อนทดสอบ"); return; }
     start(async () => {
-      const r = await testSummaryBotToken(token);
+      const r = token.trim()
+        ? await testSummaryBotToken(token)
+        : await testSavedSummaryBotToken();
       if (r.ok) toast.success(`เชื่อมต่อสำเร็จ: @${r.username ?? r.name ?? "bot"}`);
       else toast.error(r.error);
     });

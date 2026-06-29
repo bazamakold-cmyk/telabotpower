@@ -47,6 +47,24 @@ export async function testSummaryBotToken(token: string) {
   return { ok: true as const, username: r.result?.username ?? null, name: r.result?.first_name ?? null };
 }
 
+export async function testSavedSummaryBotToken() {
+  if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+  const s = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
+  if (!s?.botToken) return { ok: false as const, error: "ยังไม่ได้ตั้ง Bot Token" };
+  let token: string;
+  try {
+    token = decrypt(s.botToken);
+  } catch {
+    return { ok: false as const, error: "ถอดรหัส Bot Token ไม่สำเร็จ" };
+  }
+  const r = await getSummaryBotInfo(token);
+  if (!r.ok) {
+    const raw = r.description ?? "เชื่อมต่อไม่สำเร็จ";
+    return { ok: false as const, error: raw === "Not Found" || raw === "Unauthorized" ? "Token ไม่ถูกต้อง" : raw };
+  }
+  return { ok: true as const, username: r.result?.username ?? null, name: r.result?.first_name ?? null };
+}
+
 export async function saveSummaryGroupChatId(chatId: string) {
   if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
   if (!chatId.trim()) return { ok: false as const, error: "กรุณากรอก Chat ID" };
