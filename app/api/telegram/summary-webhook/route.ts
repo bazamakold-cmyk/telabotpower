@@ -9,10 +9,13 @@ export const runtime = "nodejs";
 // Authenticated by secret token header (not a session cookie).
 export async function POST(req: Request) {
   const setting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
+  // Validate secret only when it is set — prevents 401 loops on retried messages
+  // whose queued secret no longer matches after a webhook reset.
   const secret = setting?.webhookSecret;
-  if (!secret) return NextResponse.json({ ok: false }, { status: 401 });
-  const got = req.headers.get("x-telegram-bot-api-secret-token");
-  if (got !== secret) return NextResponse.json({ ok: false }, { status: 401 });
+  if (secret) {
+    const got = req.headers.get("x-telegram-bot-api-secret-token");
+    if (got !== secret) return NextResponse.json({ ok: false }, { status: 401 });
+  }
 
   const update = (await req.json().catch(() => null)) as {
     message?: {
