@@ -4,6 +4,7 @@ import { Eye, EyeOff, Send, Webhook } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  checkWebhookStatus,
   configureSummaryWebhook,
   saveSummaryBotToken,
   saveSummaryGroupChatId,
@@ -29,6 +30,7 @@ export function SettingsSummaryBotTab({
   const [show, setShow] = useState(false);
   const [chatId, setChatId] = useState(savedChatId ?? "");
   const [hookUrl, setHookUrl] = useState<string | null>(webhookUrl);
+  const [webhookDiag, setWebhookDiag] = useState<{ url: string | null; pending: number; lastError: string | null; lastErrorDate: string | null } | null>(null);
   const [pending, start] = useTransition();
 
   function saveToken() {
@@ -160,7 +162,38 @@ export function SettingsSummaryBotTab({
           <Button variant="outline" disabled={pending} onClick={setupWebhook}>
             ตั้ง / รีเซ็ต Webhook
           </Button>
+          <Button variant="ghost" disabled={pending} onClick={() => start(async () => {
+            const r = await checkWebhookStatus();
+            if (!r.ok) { toast.error(r.error); return; }
+            setWebhookDiag({ url: r.url, pending: r.pending, lastError: r.lastError, lastErrorDate: r.lastErrorDate });
+          })}>
+            ตรวจสอบสถานะ
+          </Button>
         </div>
+        {webhookDiag && (
+          <dl className="grid gap-1 rounded-lg bg-muted/40 p-3 text-xs">
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">URL ที่ Telegram รู้จัก</dt>
+              <dd className="truncate font-mono">{webhookDiag.url ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-2">
+              <dt className="text-muted-foreground">รอประมวลผล</dt>
+              <dd className={webhookDiag.pending > 0 ? "font-semibold text-yellow-400" : ""}>{webhookDiag.pending} รายการ</dd>
+            </div>
+            {webhookDiag.lastError && (
+              <div className="flex flex-col gap-0.5">
+                <dt className="text-muted-foreground">Error ล่าสุด</dt>
+                <dd className="text-red-400">{webhookDiag.lastError} ({webhookDiag.lastErrorDate})</dd>
+              </div>
+            )}
+            {!webhookDiag.lastError && (
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">สถานะ</dt>
+                <dd className="text-emerald-400">✓ ไม่มี error</dd>
+              </div>
+            )}
+          </dl>
+        )}
         <p className="text-xs text-muted-foreground">
           ⚠️ Webhook ต้องเป็น URL สาธารณะ (https) — ใช้ได้หลัง deploy ขึ้น Vercel
         </p>

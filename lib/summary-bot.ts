@@ -52,6 +52,17 @@ export function getSummaryBotInfo(token: string) {
   return callSummaryTelegram<{ id: number; username?: string; first_name?: string }>(token, "getMe");
 }
 
+export async function getSummaryWebhookInfo() {
+  const token = await getSummaryBotToken();
+  if (!token) return { ok: false as const, description: "ยังไม่ได้ตั้ง Bot Token" };
+  return callSummaryTelegram<{
+    url: string;
+    pending_update_count: number;
+    last_error_message?: string;
+    last_error_date?: number;
+  }>(token, "getWebhookInfo");
+}
+
 // --- Formatting helpers (pure — exported for tests) ---
 
 export type PendingGroup = { name: string; count: number; maxWaitMin: number };

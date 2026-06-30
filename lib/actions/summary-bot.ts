@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
-import { getSummaryBotInfo, sendSummaryMessage, setSummaryWebhook } from "@/lib/summary-bot";
+import { getSummaryBotInfo, getSummaryWebhookInfo, sendSummaryMessage, setSummaryWebhook } from "@/lib/summary-bot";
 
 async function su() {
   return (await requireRole(["SUPER_ADMIN"])) !== null;
@@ -103,6 +103,19 @@ export async function configureSummaryWebhook(baseUrl: string) {
   });
   revalidatePath("/settings");
   return { ok: true as const, url };
+}
+
+export async function checkWebhookStatus() {
+  if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+  const r = await getSummaryWebhookInfo();
+  if (!r.ok) return { ok: false as const, error: r.description ?? "อ่านไม่สำเร็จ" };
+  return {
+    ok: true as const,
+    url: r.result?.url ?? null,
+    pending: r.result?.pending_update_count ?? 0,
+    lastError: r.result?.last_error_message ?? null,
+    lastErrorDate: r.result?.last_error_date ? new Date(r.result.last_error_date * 1000).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }) : null,
+  };
 }
 
 export async function testSummaryBotPing() {
