@@ -8,6 +8,7 @@ import {
   configureSummaryWebhook,
   saveSummaryBotToken,
   saveSummaryGroupChatId,
+  testHandlePendingChats,
   testSavedSummaryBotToken,
   testSummaryBotPing,
   testSummaryBotToken,
@@ -31,6 +32,7 @@ export function SettingsSummaryBotTab({
   const [chatId, setChatId] = useState(savedChatId ?? "");
   const [hookUrl, setHookUrl] = useState<string | null>(webhookUrl);
   const [webhookDiag, setWebhookDiag] = useState<{ url: string | null; pending: number; lastError: string | null; lastErrorDate: string | null } | null>(null);
+  const [queryResult, setQueryResult] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function saveToken() {
@@ -223,6 +225,31 @@ export function SettingsSummaryBotTab({
           <Send className="mr-2 size-4" />
           ทดสอบส่งข้อความ
         </Button>
+      </section>
+
+      {/* Test query */}
+      <section className="glass space-y-3 rounded-xl p-4">
+        <h3 className="font-display font-semibold">ทดสอบ Query (Debug)</h3>
+        <p className="text-xs text-muted-foreground">รัน handlePendingChats บน production DB แล้วแสดงผลตรงนี้ ใช้ตรวจสอบว่า query ทำงานถูกต้องก่อนส่งผ่าน Telegram</p>
+        <Button variant="outline" disabled={pending} onClick={() => start(async () => {
+          const r = await testHandlePendingChats();
+          if (!r.ok) { setQueryResult(`❌ Error: ${r.error}`); return; }
+          const lines = [
+            `DB Settings: chatId=${r.targetGroupChatId ?? "❌ null"} | token=${r.hasToken ? "✅" : "❌"} | secret=${r.hasSecret ? "✅" : "❌"}`,
+            `กลุ่มทั้งหมด: ${r.groupCount} กลุ่ม`,
+            ...r.results.map(g =>
+              g.pendingCount > 0
+                ? `🔴 ${g.name}: ค้าง ${g.pendingCount} รอ ${g.waitMin} นาที`
+                : `✅ ${g.name}: lastRole=${g.lastRole ?? "ไม่มีข้อความ"} ไม่มีค้าง`
+            ),
+          ];
+          setQueryResult(lines.join("\n"));
+        })}>
+          ทดสอบ Query
+        </Button>
+        {queryResult && (
+          <pre className="rounded-lg bg-muted/40 p-3 text-xs whitespace-pre-wrap break-all">{queryResult}</pre>
+        )}
       </section>
     </div>
   );

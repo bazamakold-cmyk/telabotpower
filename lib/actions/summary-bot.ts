@@ -118,6 +118,48 @@ export async function checkWebhookStatus() {
   };
 }
 
+export async function testHandlePendingChats() {
+  if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+  try {
+    const { db: db2 } = await import("@/lib/db");
+    const groups = await db2.telegramGroup.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+    });
+    const results: { name: string; lastRole: string | null; pendingCount: number; waitMin: number }[] = [];
+    for (const g of groups) {
+      const lastMsg = await db2.chatMessage.findFirst({
+        where: { groupId: g.id },
+        orderBy: { sentAt: "desc" },
+      });
+      if (!lastMsg) { results.push({ name: g.name, lastRole: null, pendingCount: 0, waitMin: 0 }); continue; }
+      const lastReply = await db2.chatMessage.findFirst({
+        where: { groupId: g.id, role: { in: ["ADMIN", "BOT"] } },
+        orderBy: { sentAt: "desc" },
+      });
+      const pendingCount = await db2.chatMessage.count({
+        where: { groupId: g.id, role: "CUSTOMER", sentAt: { gt: lastReply?.sentAt ?? new Date(0) } },
+      });
+      const firstPending = lastReply
+        ? await db2.chatMessage.findFirst({ where: { groupId: g.id, role: "CUSTOMER", sentAt: { gt: lastReply.sentAt } }, orderBy: { sentAt: "asc" } })
+        : await db2.chatMessage.findFirst({ where: { groupId: g.id, role: "CUSTOMER" }, orderBy: { sentAt: "asc" } });
+      const waitMin = firstPending ? Math.floor((Date.now() - firstPending.sentAt.getTime()) / 60_000) : 0;
+      results.push({ name: g.name, lastRole: lastMsg.role, pendingCount, waitMin });
+    }
+    const setting = await db2.summaryBotSetting.findUnique({ where: { id: "default" } });
+    return {
+      ok: true as const,
+      groupCount: groups.length,
+      results,
+      targetGroupChatId: setting?.targetGroupChatId ?? null,
+      hasToken: !!setting?.botToken,
+      hasSecret: !!setting?.webhookSecret,
+    };
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : "unknown error" };
+  }
+}
+
 export async function testSummaryBotPing() {
   if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
   const setting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
