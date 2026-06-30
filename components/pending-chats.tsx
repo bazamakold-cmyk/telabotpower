@@ -1,7 +1,9 @@
 "use client";
 
-import { AlertCircle, Clock, MessageSquare, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, CheckCheck, Clock, MessageSquare, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { clearPendingChat } from "@/lib/actions/telegram";
 import { apiFetch } from "@/lib/api-fetch";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
@@ -26,8 +28,30 @@ function waitingLabel(iso: string): { text: string; level: "ok" | "warn" | "dang
   return { text, level: "danger" };
 }
 
-function PendingCard({ chat }: { chat: PendingChat }) {
+function PendingCard({
+  chat,
+  isSuperAdmin,
+  onCleared,
+}: {
+  chat: PendingChat;
+  isSuperAdmin: boolean;
+  onCleared: (groupId: string) => void;
+}) {
   const wait = waitingLabel(chat.waitingSince);
+  const [pending, start] = useTransition();
+
+  function handleClear() {
+    start(async () => {
+      const r = await clearPendingChat(chat.groupId);
+      if (r.ok) {
+        toast.success(`เคลียร์แชทค้างของ "${chat.groupName}" แล้ว`);
+        onCleared(chat.groupId);
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
   return (
     <div className={cn(
       "glass rounded-xl p-4 space-y-3 border-l-4",
@@ -36,7 +60,7 @@ function PendingCard({ chat }: { chat: PendingChat }) {
       : "border-l-emerald-500"
     )}>
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <MessageSquare className="size-4 text-primary shrink-0" />
           <span className="text-xs text-muted-foreground">กลุ่ม:</span>
           <span className="font-semibold text-primary">{chat.groupName}</span>
@@ -49,14 +73,22 @@ function PendingCard({ chat }: { chat: PendingChat }) {
             {chat.pendingCount} ข้อความ
           </span>
         </div>
-        <div className={cn(
-          "flex items-center gap-1 text-xs font-medium shrink-0",
-          wait.level === "danger" ? "text-red-400"
-          : wait.level === "warn" ? "text-yellow-400"
-          : "text-emerald-400"
-        )}>
-          <Clock className="size-3.5" />
-          รอ {wait.text}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className={cn(
+            "flex items-center gap-1 text-xs font-medium",
+            wait.level === "danger" ? "text-red-400"
+            : wait.level === "warn" ? "text-yellow-400"
+            : "text-emerald-400"
+          )}>
+            <Clock className="size-3.5" />
+            รอ {wait.text}
+          </div>
+          {isSuperAdmin && (
+            <Button size="sm" variant="outline" disabled={pending} onClick={handleClear}>
+              <CheckCheck className="size-3.5" />
+              {pending ? "กำลังเคลียร์…" : "เคลียร์"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -67,7 +99,7 @@ function PendingCard({ chat }: { chat: PendingChat }) {
   );
 }
 
-export function PendingChats({ initial }: { initial: PendingChat[] }) {
+export function PendingChats({ initial, isSuperAdmin = false }: { initial: PendingChat[]; isSuperAdmin?: boolean }) {
   const [chats, setChats] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -132,7 +164,14 @@ export function PendingChats({ initial }: { initial: PendingChat[] }) {
         />
       ) : (
         <div className="space-y-3">
-          {sorted.map((c) => <PendingCard key={c.groupId} chat={c} />)}
+          {sorted.map((c) => (
+            <PendingCard
+              key={c.groupId}
+              chat={c}
+              isSuperAdmin={isSuperAdmin}
+              onCleared={(id) => setChats((prev) => prev.filter((x) => x.groupId !== id))}
+            />
+          ))}
         </div>
       )}
     </div>

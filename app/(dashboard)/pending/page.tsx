@@ -54,7 +54,7 @@ async function getPendingChats() {
 }
 
 export default async function PendingPage() {
-  await requireAnyRole();
+  const user = await requireAnyRole();
   const pending = await getPendingChats();
 
   return (
@@ -65,7 +65,7 @@ export default async function PendingPage() {
           กลุ่มที่ลูกค้าส่งข้อความมาแล้วยังไม่มีใครตอบกลับ — อัปเดตอัตโนมัติทุก 60 วินาที
         </p>
       </div>
-      <PendingChats initial={pending} />
+      <PendingChats initial={pending} isSuperAdmin={user.role === "SUPER_ADMIN"} />
     </main>
   );
 }

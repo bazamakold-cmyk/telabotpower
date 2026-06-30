@@ -91,3 +91,20 @@ export async function pingGroup(chatId: string) {
   if (!r.ok) return { ok: false as const, error: r.description ?? "ส่งไม่สำเร็จ" };
   return { ok: true as const };
 }
+
+export async function clearPendingChat(groupId: string) {
+  if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+  const group = await db.telegramGroup.findUnique({ where: { id: groupId } });
+  if (!group) return { ok: false as const, error: "ไม่พบกลุ่มนี้" };
+  await db.chatMessage.create({
+    data: {
+      groupId,
+      tgUserId: "system",
+      role: "BOT",
+      text: "[เคลียร์โดยแอดมิน]",
+      sentAt: new Date(),
+    },
+  });
+  revalidatePath("/pending");
+  return { ok: true as const };
+}
