@@ -18,11 +18,12 @@ export async function POST(req: Request) {
     message?: {
       text?: string;
       chat?: { id?: number | string };
+      from?: { id?: number | string; is_bot?: boolean };
     };
   } | null;
 
   const msg = update?.message;
-  if (msg?.text && msg.chat?.id != null) {
+  if (msg?.text && msg.chat?.id != null && !msg.from?.is_bot) {
     const chatId = String(msg.chat.id);
     // Reject messages from groups other than the configured admin group.
     // groupIdsMatch handles the -100 supergroup upgrade transparently.
