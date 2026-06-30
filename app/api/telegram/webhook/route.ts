@@ -33,9 +33,13 @@ export async function POST(req: Request) {
 
     // Admin summary group: dispatch keyword, skip customer flow
     const summaryBotSetting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
-    if (summaryBotSetting?.targetGroupChatId && chatId === summaryBotSetting.targetGroupChatId) {
-      await dispatchKeyword(msg.text, chatId).catch(() => {});
-      return NextResponse.json({ ok: true });
+    if (summaryBotSetting?.targetGroupChatId) {
+      const stored = summaryBotSetting.targetGroupChatId;
+      const isAdmin = chatId === stored || chatId.startsWith("-100") && chatId.replace(/^-100/, "-") === stored;
+      if (isAdmin) {
+        await dispatchKeyword(msg.text, chatId).catch(() => {});
+        return NextResponse.json({ ok: true });
+      }
     }
 
     const group = await db.telegramGroup.findUnique({ where: { chatId } });

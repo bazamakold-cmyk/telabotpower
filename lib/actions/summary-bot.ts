@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
-import { getSummaryBotInfo, sendSummaryMessage, setSummaryWebhook } from "@/lib/summary-bot";
+import { getSummaryBotInfo, getSummaryChatInfo, getSummaryWebhookInfo, sendSummaryMessage, setSummaryWebhook } from "@/lib/summary-bot";
 
 async function su() {
   return (await requireRole(["SUPER_ADMIN"])) !== null;
@@ -103,6 +103,29 @@ export async function configureSummaryWebhook(baseUrl: string) {
   });
   revalidatePath("/settings");
   return { ok: true as const, url };
+}
+
+export async function checkSummaryBotStatus() {
+  if (!(await su())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+  const setting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
+  const [webhookRes, chatRes] = await Promise.all([
+    getSummaryWebhookInfo(),
+    setting?.targetGroupChatId ? getSummaryChatInfo(setting.targetGroupChatId) : Promise.resolve(null),
+  ]);
+  return {
+    ok: true as const,
+    webhook: webhookRes.ok ? {
+      url: webhookRes.result?.url ?? null,
+      pending: webhookRes.result?.pending_update_count ?? 0,
+      lastError: webhookRes.result?.last_error_message ?? null,
+    } : { url: null, pending: 0, lastError: webhookRes.description ?? "อ่านไม่สำเร็จ" },
+    chat: chatRes?.ok ? {
+      id: chatRes.result?.id,
+      title: chatRes.result?.title ?? null,
+      type: chatRes.result?.type ?? null,
+    } : { id: null, title: null, type: null, error: chatRes?.description ?? "ไม่พบกลุ่ม" },
+    savedChatId: setting?.targetGroupChatId ?? null,
+  };
 }
 
 export async function testSummaryBotPing() {

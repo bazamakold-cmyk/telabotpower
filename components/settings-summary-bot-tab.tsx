@@ -166,6 +166,20 @@ export function SettingsSummaryBotTab({
         </p>
       </section>
 
+      {/* Keywords */}
+      <section className="glass space-y-3 rounded-xl p-4">
+        <h3 className="font-display font-semibold">คำสั่งที่รองรับ</h3>
+        <p className="text-xs text-muted-foreground">พิมพ์คำเหล่านี้ในกลุ่ม Admin — ไม่ต้องพิมพ์ตรงทั้งหมด (ใช้ contains)</p>
+        <div className="space-y-2">
+          <div className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm">
+            <code className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary">
+              สรุปแชทค้าง
+            </code>
+            <span className="text-muted-foreground">สรุปกลุ่มที่มีแชทลูกค้าค้างอยู่ พร้อมจำนวนและเวลารอ 🔴🟡🟢</span>
+          </div>
+        </div>
+      </section>
+
       {/* Test ping */}
       <section className="glass space-y-3 rounded-xl p-4">
         <h3 className="font-display font-semibold">ทดสอบส่งข้อความ</h3>

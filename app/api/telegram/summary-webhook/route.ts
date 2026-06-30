@@ -23,13 +23,36 @@ export async function POST(req: Request) {
   const msg = update?.message;
   if (msg?.text && msg.chat?.id != null) {
     const chatId = String(msg.chat.id);
-    // Reject messages from groups other than the configured admin group
-    if (setting?.targetGroupChatId && chatId !== setting.targetGroupChatId) {
-      return NextResponse.json({ ok: true });
+    // Reject messages from groups other than the configured admin group.
+    // Normalize supergroup upgrade: basic -XXXXX may become -100XXXXX after promotion.
+    if (setting?.targetGroupChatId && !groupIdsMatch(chatId, setting.targetGroupChatId)) {
+      // Auto-update stored chatId if the group was promoted to supergroup
+      if (isSuperGroupOf(chatId, setting.targetGroupChatId)) {
+        await db.summaryBotSetting.update({
+          where: { id: "default" },
+          data: { targetGroupChatId: chatId },
+        });
+      } else {
+        return NextResponse.json({ ok: true });
+      }
     }
     await dispatchKeyword(msg.text, chatId).catch(() => {});
   }
 
   // Always 200 so Telegram won't keep retrying.
   return NextResponse.json({ ok: true });
+}
+
+// Strip the -100 supergroup prefix to get the bare group digits for comparison.
+function bareId(chatId: string): string {
+  return chatId.replace(/^-100/, "-");
+}
+
+function groupIdsMatch(a: string, b: string): boolean {
+  return a === b || bareId(a) === bareId(b);
+}
+
+// Returns true if `incoming` is the supergroup upgrade of `stored` basic group.
+function isSuperGroupOf(incoming: string, stored: string): boolean {
+  return incoming.startsWith("-100") && bareId(incoming) === stored;
 }
