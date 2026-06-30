@@ -36,6 +36,11 @@ export async function POST(req: Request) {
         data: { targetGroupChatId: chatId },
       }).catch(() => {});
     }
+
+    // DEBUG: echo back to confirm webhook is reached and show exact text received
+    const { sendSummaryMessage } = await import("@/lib/summary-bot");
+    await sendSummaryMessage(chatId, `[DEBUG] webhook reached\nchatId=${chatId}\ntext="${msg.text}"\nkw=${JSON.stringify(msg.text)}`).catch(() => {});
+
     await dispatchKeyword(msg.text, chatId);
   }
 
