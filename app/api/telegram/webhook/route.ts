@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAiSettings } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { decideBotAction, ragAnswer } from "@/lib/rag";
+import { dispatchKeyword } from "@/lib/summary-bot";
 import { sendMessage } from "@/lib/telegram";
 
 export const runtime = "nodejs";
@@ -29,6 +30,14 @@ export async function POST(req: Request) {
   if (msg?.text && msg.chat?.id != null) {
     const chatId = String(msg.chat.id);
     const tgUserId = msg.from?.id != null ? String(msg.from.id) : "";
+
+    // Admin summary group: dispatch keyword, skip customer flow
+    const summaryBotSetting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
+    if (summaryBotSetting?.targetGroupChatId && chatId === summaryBotSetting.targetGroupChatId) {
+      await dispatchKeyword(msg.text, chatId).catch(() => {});
+      return NextResponse.json({ ok: true });
+    }
+
     const group = await db.telegramGroup.findUnique({ where: { chatId } });
     if (group) {
       const admin = tgUserId
