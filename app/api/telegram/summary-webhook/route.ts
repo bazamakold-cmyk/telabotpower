@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         data: { targetGroupChatId: chatId },
       }).catch(() => {});
     }
-    await dispatchKeyword(msg.text, chatId).catch(() => {});
+    await dispatchKeyword(msg.text, chatId);
   }
 
   // Always 200 so Telegram won't keep retrying.

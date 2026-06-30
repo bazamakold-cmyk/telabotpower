@@ -158,6 +158,11 @@ export function matchKeyword(text: string): string | null {
 export async function dispatchKeyword(text: string, chatId: string): Promise<void> {
   const kw = matchKeyword(text);
   if (!kw) return;
-  const reply = await KEYWORD_HANDLERS[kw]();
-  await sendSummaryMessage(chatId, reply);
+  try {
+    const reply = await KEYWORD_HANDLERS[kw]();
+    await sendSummaryMessage(chatId, reply);
+  } catch (err) {
+    console.error("[dispatchKeyword] error:", err);
+    await sendSummaryMessage(chatId, `❌ เกิดข้อผิดพลาด: ${err instanceof Error ? err.message : "unknown"}`).catch(() => {});
+  }
 }
