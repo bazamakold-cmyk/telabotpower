@@ -52,24 +52,6 @@ export function getSummaryBotInfo(token: string) {
   return callSummaryTelegram<{ id: number; username?: string; first_name?: string }>(token, "getMe");
 }
 
-export async function getSummaryWebhookInfo() {
-  const token = await getSummaryBotToken();
-  if (!token) return { ok: false as const, description: "ยังไม่ได้ตั้ง Bot Token" };
-  return callSummaryTelegram<{
-    url: string;
-    has_custom_certificate: boolean;
-    pending_update_count: number;
-    last_error_message?: string;
-    last_error_date?: number;
-  }>(token, "getWebhookInfo");
-}
-
-export async function getSummaryChatInfo(chatId: string) {
-  const token = await getSummaryBotToken();
-  if (!token) return { ok: false as const, description: "ยังไม่ได้ตั้ง Bot Token" };
-  return callSummaryTelegram<{ id: number; title?: string; type: string }>(token, "getChat", { chat_id: chatId });
-}
-
 // --- Formatting helpers (pure — exported for tests) ---
 
 export type PendingGroup = { name: string; count: number; maxWaitMin: number };
