@@ -37,6 +37,10 @@ export async function callTelegram<T = unknown>(
 export const getMe = () => callTelegram<{ id: number; username?: string; first_name?: string }>("getMe");
 export const sendMessage = (chatId: string, text: string) =>
   callTelegram("sendMessage", { chat_id: chatId, text });
+/** Membership status of a user (here: the bot itself) in a chat. Errors ("chat not found")
+ *  mean the bot isn't reachable in that group. */
+export const getChatMember = (chatId: string, userId: number) =>
+  callTelegram<{ status: string }>("getChatMember", { chat_id: chatId, user_id: userId });
 export const getWebhookInfo = () =>
   callTelegram<{ url?: string; pending_update_count?: number; last_error_message?: string }>(
     "getWebhookInfo"

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { encrypt } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/session";
-import { getMe, getWebhookInfo, sendMessage, setWebhook } from "@/lib/telegram";
+import { getChatMember, getMe, getWebhookInfo, sendMessage, setWebhook } from "@/lib/telegram";
 
 async function su() {
   return (await requireRole(["SUPER_ADMIN"])) !== null;
@@ -90,6 +90,71 @@ export async function pingGroup(chatId: string) {
   const r = await sendMessage(chatId, "🔔 ทดสอบการเชื่อมต่อจาก Telabotpower");
   if (!r.ok) return { ok: false as const, error: r.description ?? "ส่งไม่สำเร็จ" };
   return { ok: true as const };
+}
+
+export type BotPresenceRow = {
+  name: string;
+  chatId: string;
+  present: boolean;
+  detail: string;
+};
+
+const PRESENCE_LABEL: Record<string, string> = {
+  creator: "เจ้าของกลุ่ม",
+  administrator: "แอดมิน",
+  member: "สมาชิก",
+  restricted: "ถูกจำกัดสิทธิ์",
+  left: "ออกจากกลุ่มแล้ว",
+  kicked: "ถูกเตะออก",
+};
+
+/**
+ * Verify the customer bot is still a member of every registered group.
+ * Telegram offers no way to list a bot's groups, so we can only check groups we
+ * already know about (TelegramGroup rows). A missing/kicked bot means that group's
+ * messages never reach us — its chats would be invisible to "สรุปแชทค้าง".
+ */
+export async function checkBotPresence() {
+  if (!(await mgr())) return { ok: false as const, error: "ไม่มีสิทธิ์" };
+
+  const me = await getMe();
+  if (!me.ok || !me.result?.id) {
+    return { ok: false as const, error: me.description ?? "อ่านข้อมูลบอทไม่สำเร็จ — ตรวจ Bot Token" };
+  }
+  const botId = me.result.id;
+
+  const groups = await db.telegramGroup.findMany({
+    where: { isActive: true },
+    select: { name: true, chatId: true },
+    orderBy: { name: "asc" },
+  });
+
+  // Check in small parallel batches — reads are cheap but stay under Telegram's ~30 req/s.
+  const rows: BotPresenceRow[] = [];
+  const BATCH = 8;
+  for (let i = 0; i < groups.length; i += BATCH) {
+    const slice = groups.slice(i, i + BATCH);
+    const settled = await Promise.all(
+      slice.map(async (g) => {
+        const r = await getChatMember(g.chatId, botId);
+        if (!r.ok || !r.result) {
+          return { name: g.name, chatId: g.chatId, present: false, detail: r.description ?? "ตรวจไม่สำเร็จ" };
+        }
+        const status = r.result.status;
+        const present = status === "creator" || status === "administrator" || status === "member";
+        return { name: g.name, chatId: g.chatId, present, detail: PRESENCE_LABEL[status] ?? status };
+      })
+    );
+    rows.push(...settled);
+  }
+
+  return {
+    ok: true as const,
+    botUsername: me.result.username ?? null,
+    total: rows.length,
+    present: rows.filter((r) => r.present).length,
+    rows,
+  };
 }
 
 export async function clearPendingChat(groupId: string) {

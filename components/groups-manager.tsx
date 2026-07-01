@@ -1,11 +1,11 @@
 "use client";
 
-import { Bot, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, Pencil, Plus, Send, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
-import { pingGroup } from "@/lib/actions/telegram";
+import { checkBotPresence, pingGroup, type BotPresenceRow } from "@/lib/actions/telegram";
 import { ResponsiveTable, type Column } from "@/components/responsive-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -84,6 +84,8 @@ export function GroupsManager({
   const [pinging, setPinging] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1);
+  const [checking, setChecking] = useState(false);
+  const [presence, setPresence] = useState<{ present: number; total: number; rows: BotPresenceRow[] } | null>(null);
 
   const PAGE_SIZE = 20;
   const totalPages = Math.max(1, Math.ceil(initialGroups.length / PAGE_SIZE));
@@ -95,6 +97,20 @@ export function GroupsManager({
     setPinging(null);
     if (r.ok) toast.success(`ส่งข้อความทดสอบเข้า “${g.name}” สำเร็จ`);
     else toast.error(r.error);
+  }
+
+  async function runPresenceCheck() {
+    setChecking(true);
+    const r = await checkBotPresence();
+    setChecking(false);
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    setPresence({ present: r.present, total: r.total, rows: r.rows });
+    const missing = r.total - r.present;
+    if (missing === 0) toast.success(`บอทอยู่ครบทั้ง ${r.total} กลุ่ม ✅`);
+    else toast.warning(`บอทหายจาก ${missing} กลุ่ม จากทั้งหมด ${r.total} กลุ่ม`);
   }
 
   async function deleteGroup() {
@@ -211,13 +227,16 @@ export function GroupsManager({
         </div>
       </div>
 
-      {canEdit && (
-        <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" disabled={checking} onClick={runPresenceCheck}>
+          <ShieldCheck className="size-4" /> {checking ? "กำลังตรวจ…" : "ตรวจสอบบอทในกลุ่ม"}
+        </Button>
+        {canEdit && (
           <Button onClick={() => setEditing(emptyDraft())}>
             <Plus className="size-4" /> เพิ่มกลุ่ม
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <ResponsiveTable columns={columns} data={pagedGroups} getRowKey={(g) => g.id} />
 
@@ -257,12 +276,59 @@ export function GroupsManager({
         </div>
       )}
 
+      <Dialog open={presence !== null} onOpenChange={(o) => !o && setPresence(null)}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ผลตรวจสอบบอทในกลุ่ม</DialogTitle>
+            <DialogDescription>
+              {presence && (
+                <>
+                  บอทอยู่ครบ{" "}
+                  <span className="font-semibold text-success">{presence.present}</span> จาก{" "}
+                  <span className="font-semibold">{presence.total}</span> กลุ่ม
+                  {presence.present < presence.total && (
+                    <span className="text-warn"> — กลุ่มที่บอทหายให้เอา @{botUsername ?? "bot"} กลับเข้าไป</span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-1.5">
+            {presence?.rows.map((r) => (
+              <li
+                key={r.chatId}
+                className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{r.name}</span>
+                  <span className="block truncate font-mono text-xs text-muted-foreground">{r.chatId}</span>
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium",
+                    r.present ? "text-success" : "text-danger"
+                  )}
+                >
+                  {r.present ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
+                  {r.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setPresence(null)}>
+              ปิด
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={confirmDel !== null} onOpenChange={(o) => { if (!o && !busy) setConfirmDel(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>ลบกลุ่มนี้?</DialogTitle>
             <DialogDescription>
-              ลบ "{confirmDel?.name}" ({confirmDel?.chatId}) อย่างถาวร — กู้คืนไม่ได้
+              ลบ “{confirmDel?.name}” ({confirmDel?.chatId}) อย่างถาวร — กู้คืนไม่ได้
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
