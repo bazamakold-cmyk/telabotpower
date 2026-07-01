@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { EditorialBackdrop } from "@/components/editorial-backdrop";
 import { LockdownOverlay } from "@/components/lockdown-overlay";
 import { LoginQr } from "@/components/login-qr";
-import { ParticlePlexus } from "@/components/particle-plexus";
 import { PinKeypad } from "@/components/pin-keypad";
 import { Button } from "@/components/ui/button";
 
@@ -13,7 +13,7 @@ export default function LoginPage() {
 
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden p-4">
-      <ParticlePlexus />
+      <EditorialBackdrop />
       <div className="glass relative w-full max-w-sm rounded-2xl p-6 shadow-[0_0_40px_-12px_var(--primary)]">
         {locked && <LockdownOverlay />}
 

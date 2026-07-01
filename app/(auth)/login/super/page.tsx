@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
-import { ParticlePlexus } from "@/components/particle-plexus";
+import { EditorialBackdrop } from "@/components/editorial-backdrop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +35,7 @@ export default function SuperLoginPage() {
 
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden p-4">
-      <ParticlePlexus />
+      <EditorialBackdrop />
       <div className="glass relative w-full max-w-sm rounded-2xl p-6 shadow-[0_0_40px_-12px_var(--primary)]">
         <div className="mb-6 text-center">
           <h1 className="font-display text-2xl font-bold">Super Admin</h1>

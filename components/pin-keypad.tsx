@@ -77,7 +77,6 @@ export function PinKeypad({ onLock }: { onLock: () => void }) {
           <Delete className="size-5" />
         </KeypadButton>
       </div>
-      <p className="text-xs text-muted-foreground">ทดสอบ: PIN 123456</p>
     </div>
   );
 }
