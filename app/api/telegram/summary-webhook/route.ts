@@ -6,7 +6,8 @@ import { groupIdsMatch } from "@/lib/telegram-ids";
 export const runtime = "nodejs";
 
 // Summary Bot webhook — receives messages from admin team group only.
-// Authenticated by secret token header (not a session cookie).
+// Guarded by chatId allowlist (targetGroupChatId); the URL is unlisted and
+// bypasses the session proxy via the /api/telegram/ whitelist in proxy.ts.
 export async function POST(req: Request) {
   const setting = await db.summaryBotSetting.findUnique({ where: { id: "default" } });
 
@@ -33,10 +34,6 @@ export async function POST(req: Request) {
         data: { targetGroupChatId: chatId },
       }).catch(() => {});
     }
-
-    // DEBUG: echo back to confirm webhook is reached and show exact text received
-    const { sendSummaryMessage } = await import("@/lib/summary-bot");
-    await sendSummaryMessage(chatId, `[DEBUG] webhook reached\nchatId=${chatId}\ntext="${msg.text}"\nkw=${JSON.stringify(msg.text)}`).catch(() => {});
 
     await dispatchKeyword(msg.text, chatId);
   }
