@@ -1,3 +1,4 @@
+import { generateAnswer, getAiSettings } from "@/lib/ai";
 import { decrypt } from "@/lib/crypto";
 import { db } from "@/lib/db";
 
@@ -86,6 +87,77 @@ export function formatPendingChatsMessage(groups: PendingGroup[], timeStr: strin
   ].join("\n");
 }
 
+// --- AI acknowledgment filter ---
+
+// A candidate is a group whose latest message is an unanswered customer message.
+// We still need to decide whether those unanswered messages actually require a
+// reply, or are just closing pleasantries ("ครับ", "ขอบคุณครับ", "โอเค").
+type PendingCandidate = PendingGroup & {
+  pendingTexts: string[];
+  lastAdminReply: string | null;
+};
+
+/**
+ * Parse Claude's classification reply into a boolean[] of the expected length.
+ * The model is told to return a bare JSON array, but may wrap it in prose or
+ * markdown — so we extract the first `[...]` block. Returns null if it can't be
+ * parsed or the length doesn't match (caller then falls back to fail-safe).
+ * Exported for tests.
+ */
+export function parseNeedsReplyArray(raw: string, expectedLen: number): boolean[] | null {
+  const match = raw.match(/\[[^\]]*\]/);
+  if (!match) return null;
+  let arr: unknown;
+  try {
+    arr = JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(arr) || arr.length !== expectedLen) return null;
+  return arr.map((v) => v === true);
+}
+
+/**
+ * Ask Claude which candidate groups actually need an admin reply. Returns a
+ * boolean[] aligned with `candidates`. Fails SAFE: on missing API key, AI error,
+ * or unparseable output, every candidate is treated as still pending so a real
+ * customer question is never hidden.
+ */
+export async function classifyNeedsReply(candidates: PendingCandidate[]): Promise<boolean[]> {
+  if (candidates.length === 0) return [];
+
+  const system = [
+    "คุณเป็นผู้ช่วยของทีมแอดมิน หน้าที่คือดูข้อความล่าสุดจากลูกค้าในแต่ละแชท",
+    "แล้วตัดสินว่าลูกค้ากำลังรอคำตอบ/ต้องการให้แอดมินตอบ หรือแค่ตอบรับ/ปิดบทสนทนา",
+    'เช่น "ครับ" "ค่ะ" "ขอบคุณครับ" "โอเค" "👍" "🙏" = แค่ตอบรับ ไม่ต้องตอบ',
+    "แต่ถ้ามีคำถามหรือคำขอที่ยังไม่ได้รับคำตอบ = ต้องให้แอดมินตอบ",
+    `ตอบกลับเป็น JSON array ของ boolean เท่านั้น ความยาวเท่ากับจำนวนแชท (true = ต้องตอบ, false = แค่ตอบรับ)`,
+    "ห้ามมีข้อความอื่นนอกจาก JSON array",
+  ].join("\n");
+
+  const convos = candidates
+    .map((c, i) => {
+      const reply = c.lastAdminReply ? `แอดมินตอบล่าสุด: "${c.lastAdminReply}"` : "(ยังไม่มีแอดมินตอบ)";
+      const msgs = c.pendingTexts.map((t) => `- "${t}"`).join("\n");
+      return `แชท #${i}\n${reply}\nข้อความลูกค้าที่ยังไม่ถูกตอบ:\n${msgs}`;
+    })
+    .join("\n\n");
+
+  const prompt = `${convos}\n\nตอบเป็น JSON array ของ boolean ${candidates.length} ตัว เรียงตามแชท #0 ถึง #${candidates.length - 1}`;
+
+  try {
+    const { chatModel } = await getAiSettings();
+    const raw = await generateAnswer({ system, prompt, model: chatModel, maxTokens: 500 });
+    const parsed = parseNeedsReplyArray(raw, candidates.length);
+    if (parsed) return parsed;
+    console.error("[classifyNeedsReply] unparseable AI reply:", raw.slice(0, 200));
+  } catch (e) {
+    console.error("[classifyNeedsReply] AI error:", e);
+  }
+  // Fail-safe: keep every candidate as pending.
+  return candidates.map(() => true);
+}
+
 // --- Keyword handlers ---
 
 async function handlePendingChats(): Promise<string> {
@@ -94,7 +166,7 @@ async function handlePendingChats(): Promise<string> {
     select: { id: true, name: true },
   });
 
-  const pending: PendingGroup[] = [];
+  const candidates: PendingCandidate[] = [];
 
   for (const g of groups) {
     const lastMsg = await db.chatMessage.findFirst({
@@ -108,28 +180,31 @@ async function handlePendingChats(): Promise<string> {
       orderBy: { sentAt: "desc" },
     });
 
-    const pendingCount = await db.chatMessage.count({
+    const pendingMsgs = await db.chatMessage.findMany({
       where: {
         groupId: g.id,
         role: "CUSTOMER",
         sentAt: { gt: lastReply?.sentAt ?? new Date(0) },
       },
+      orderBy: { sentAt: "asc" },
     });
-    if (pendingCount === 0) continue;
+    if (pendingMsgs.length === 0) continue;
 
-    const firstPending = lastReply
-      ? await db.chatMessage.findFirst({
-          where: { groupId: g.id, role: "CUSTOMER", sentAt: { gt: lastReply.sentAt } },
-          orderBy: { sentAt: "asc" },
-        })
-      : await db.chatMessage.findFirst({
-          where: { groupId: g.id, role: "CUSTOMER" },
-          orderBy: { sentAt: "asc" },
-        });
-
-    const waitMs = Date.now() - (firstPending?.sentAt ?? new Date()).getTime();
-    pending.push({ name: g.name, count: pendingCount, maxWaitMin: Math.floor(waitMs / 60_000) });
+    const waitMs = Date.now() - pendingMsgs[0].sentAt.getTime();
+    candidates.push({
+      name: g.name,
+      count: pendingMsgs.length,
+      maxWaitMin: Math.floor(waitMs / 60_000),
+      pendingTexts: pendingMsgs.map((m) => m.text),
+      lastAdminReply: lastReply?.text ?? null,
+    });
   }
+
+  // Drop chats where the customer only acknowledged / closed the conversation.
+  const needsReply = await classifyNeedsReply(candidates);
+  const pending: PendingGroup[] = candidates
+    .filter((_, i) => needsReply[i])
+    .map(({ name, count, maxWaitMin }) => ({ name, count, maxWaitMin }));
 
   const now = new Date().toLocaleTimeString("th-TH", {
     hour: "2-digit",

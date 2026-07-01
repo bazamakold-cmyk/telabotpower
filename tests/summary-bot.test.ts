@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPendingChatsMessage, matchKeyword } from "@/lib/summary-bot";
+import { formatPendingChatsMessage, matchKeyword, parseNeedsReplyArray } from "@/lib/summary-bot";
 
 describe("matchKeyword", () => {
   it("จับ keyword ตรง", () => {
@@ -61,5 +61,32 @@ describe("formatPendingChatsMessage", () => {
       "14:32"
     );
     expect(msg).toContain("📌 รวม: 3 แชทค้าง");
+  });
+});
+
+describe("parseNeedsReplyArray", () => {
+  it("อ่าน JSON array ตรงๆ", () => {
+    expect(parseNeedsReplyArray("[true, false, true]", 3)).toEqual([true, false, true]);
+  });
+
+  it("ดึง array ออกจากข้อความที่มี prose/markdown ปน", () => {
+    const raw = "นี่คือผลลัพธ์:\n```json\n[false, true]\n```";
+    expect(parseNeedsReplyArray(raw, 2)).toEqual([false, true]);
+  });
+
+  it("ความยาวไม่ตรง → null (ให้ caller fail-safe)", () => {
+    expect(parseNeedsReplyArray("[true, false]", 3)).toBeNull();
+  });
+
+  it("ไม่มี array → null", () => {
+    expect(parseNeedsReplyArray("ต้องตอบทั้งหมดครับ", 2)).toBeNull();
+  });
+
+  it("JSON เสีย → null", () => {
+    expect(parseNeedsReplyArray("[true, ]bad", 1)).toBeNull();
+  });
+
+  it("ค่าที่ไม่ใช่ true ถือเป็น false", () => {
+    expect(parseNeedsReplyArray('[true, "yes", 1]', 3)).toEqual([true, false, false]);
   });
 });
